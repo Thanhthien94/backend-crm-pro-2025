@@ -24,35 +24,11 @@ router.use(protect);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of items per page
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [pending, in_progress, completed, canceled]
- *         description: Filter by task status
- *       - in: query
- *         name: priority
- *         schema:
- *           type: string
- *           enum: [low, medium, high]
- *         description: Filter by task priority
- *       - in: query
- *         name: assignedTo
- *         schema:
- *           type: string
- *         description: Filter by assigned user ID
+ *       - $ref: '#/components/parameters/PageParam'
+ *       - $ref: '#/components/parameters/LimitParam'
+ *       - $ref: '#/components/parameters/TaskStatusParam'
+ *       - $ref: '#/components/parameters/TaskPriorityParam'
+ *       - $ref: '#/components/parameters/AssignedToParam'
  *       - in: query
  *         name: my
  *         schema:
@@ -71,11 +47,7 @@ router.use(protect);
  *           type: string
  *           enum: [true]
  *         description: Get only upcoming tasks (due in next 7 days)
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: Search in title or description
+ *       - $ref: '#/components/parameters/SearchParam'
  *     responses:
  *       200:
  *         description: List of tasks
@@ -98,7 +70,6 @@ router.use(protect);
  *                     $ref: '#/components/schemas/Task'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
- * 
  *   post:
  *     summary: Create a new task
  *     tags: [Tasks]
@@ -106,59 +77,7 @@ router.use(protect);
  *     security:
  *       - bearerAuth: []
  *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - title
- *             properties:
- *               title:
- *                 type: string
- *                 description: Task title
- *               description:
- *                 type: string
- *                 description: Task description
- *               dueDate:
- *                 type: string
- *                 format: date-time
- *                 description: Due date
- *               priority:
- *                 type: string
- *                 enum: [low, medium, high]
- *                 default: medium
- *                 description: Task priority
- *               status:
- *                 type: string
- *                 enum: [pending, in_progress, completed, canceled]
- *                 default: pending
- *                 description: Task status
- *               assignedTo:
- *                 type: string
- *                 description: User ID to assign
- *               relatedTo:
- *                 type: object
- *                 description: Related entity
- *                 properties:
- *                   model:
- *                     type: string
- *                     enum: [Customer, Deal]
- *                   id:
- *                     type: string
- *               reminderDate:
- *                 type: string
- *                 format: date-time
- *                 description: Reminder date
- *             example:
- *               title: "Follow up with client"
- *               description: "Call to discuss contract details"
- *               dueDate: "2023-06-15T14:00:00Z"
- *               priority: "high"
- *               assignedTo: "60d21b4667d0d8992e610c85"
- *               relatedTo:
- *                 model: "Customer"
- *                 id: "60d21b4667d0d8992e610c90"
+ *       $ref: '#/components/requestBodies/TaskBody'
  *     responses:
  *       201:
  *         description: Task created successfully
@@ -173,11 +92,7 @@ router.use(protect);
  *                 data:
  *                   $ref: '#/components/schemas/Task'
  *       400:
- *         description: Invalid input
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
@@ -196,12 +111,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Task ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Task details
@@ -219,7 +129,6 @@ router
  *         $ref: '#/components/responses/NotFoundError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
- *   
  *   put:
  *     summary: Update a task
  *     tags: [Tasks]
@@ -227,45 +136,9 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Task ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               description:
- *                 type: string
- *               dueDate:
- *                 type: string
- *                 format: date-time
- *               priority:
- *                 type: string
- *                 enum: [low, medium, high]
- *               status:
- *                 type: string
- *                 enum: [pending, in_progress, completed, canceled]
- *               assignedTo:
- *                 type: string
- *               relatedTo:
- *                 type: object
- *                 properties:
- *                   model:
- *                     type: string
- *                     enum: [Customer, Deal]
- *                   id:
- *                     type: string
- *               reminderDate:
- *                 type: string
- *                 format: date-time
+ *       $ref: '#/components/requestBodies/TaskBody'
  *     responses:
  *       200:
  *         description: Task updated successfully
@@ -283,7 +156,6 @@ router
  *         $ref: '#/components/responses/NotFoundError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
- * 
  *   delete:
  *     summary: Delete a task
  *     tags: [Tasks]
@@ -291,12 +163,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Task ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Task deleted successfully
@@ -359,11 +226,7 @@ router.route('/:id').get(getTask).put(updateTask).delete(deleteTask);
  *                   items:
  *                     $ref: '#/components/schemas/Task'
  *       400:
- *         description: Invalid model type
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */

@@ -23,35 +23,11 @@ router.use(protect);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of items per page
- *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *           enum: [lead, prospect, customer, churned]
- *         description: Filter by customer type
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [active, inactive]
- *         description: Filter by customer status
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: Search by name, email, or company
+ *       - $ref: '#/components/parameters/PageParam'
+ *       - $ref: '#/components/parameters/LimitParam'
+ *       - $ref: '#/components/parameters/CustomerTypeParam'
+ *       - $ref: '#/components/parameters/StatusParam'
+ *       - $ref: '#/components/parameters/SearchParam'
  *     responses:
  *       200:
  *         description: List of customers
@@ -81,11 +57,7 @@ router.use(protect);
  *     security:
  *       - bearerAuth: []
  *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/CustomerInput'
+ *       $ref: '#/components/requestBodies/CustomerBody'
  *     responses:
  *       201:
  *         description: Customer created successfully
@@ -100,11 +72,7 @@ router.use(protect);
  *                 data:
  *                   $ref: '#/components/schemas/Customer'
  *       400:
- *         description: Invalid input
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
@@ -129,12 +97,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Customer ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Customer details
@@ -159,18 +122,9 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Customer ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/CustomerInput'
+ *       $ref: '#/components/requestBodies/CustomerBody'
  *     responses:
  *       200:
  *         description: Customer updated successfully
@@ -195,12 +149,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Customer ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Customer deleted successfully

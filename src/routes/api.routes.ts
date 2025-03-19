@@ -30,35 +30,11 @@ router.use(authenticateApiKey);
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of items per page
- *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *           enum: [lead, prospect, customer, churned]
- *         description: Filter by customer type
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [active, inactive]
- *         description: Filter by customer status
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: Search by name, email, or company
+ *       - $ref: '#/components/parameters/PageParam'
+ *       - $ref: '#/components/parameters/LimitParam'
+ *       - $ref: '#/components/parameters/CustomerTypeParam'
+ *       - $ref: '#/components/parameters/StatusParam'
+ *       - $ref: '#/components/parameters/SearchParam'
  *     responses:
  *       200:
  *         description: List of customers
@@ -85,7 +61,6 @@ router.use(authenticateApiKey);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- *   
  *   post:
  *     summary: Create a new customer (External API)
  *     tags: [External API]
@@ -93,11 +68,7 @@ router.use(authenticateApiKey);
  *     security:
  *       - apiKeyAuth: []
  *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/CustomerInput'
+ *       $ref: '#/components/requestBodies/CustomerBody'
  *     responses:
  *       201:
  *         description: Customer created successfully
@@ -112,11 +83,7 @@ router.use(authenticateApiKey);
  *                 data:
  *                   $ref: '#/components/schemas/Customer'
  *       400:
- *         description: Invalid input
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         description: Invalid or insufficient API key
  *         content:
@@ -142,12 +109,7 @@ router.route('/customers').get(getCustomers).post(createCustomer);
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Customer ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Customer details
@@ -169,7 +131,6 @@ router.route('/customers').get(getCustomers).post(createCustomer);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- *   
  *   put:
  *     summary: Update a customer (External API)
  *     tags: [External API]
@@ -177,18 +138,9 @@ router.route('/customers').get(getCustomers).post(createCustomer);
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Customer ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/CustomerInput'
+ *       $ref: '#/components/requestBodies/CustomerBody'
  *     responses:
  *       200:
  *         description: Customer updated successfully
@@ -216,7 +168,6 @@ router.route('/customers').get(getCustomers).post(createCustomer);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- *   
  *   delete:
  *     summary: Delete a customer (External API)
  *     tags: [External API]
@@ -224,12 +175,7 @@ router.route('/customers').get(getCustomers).post(createCustomer);
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Customer ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Customer deleted successfully
@@ -271,30 +217,10 @@ router.route('/customers/:id').get(getCustomer).put(updateCustomer).delete(delet
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of items per page
- *       - in: query
- *         name: stage
- *         schema:
- *           type: string
- *           enum: [lead, qualified, proposal, negotiation, closed-won, closed-lost]
- *         description: Filter by deal stage
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [active, inactive]
- *         description: Filter by deal status
+ *       - $ref: '#/components/parameters/PageParam'
+ *       - $ref: '#/components/parameters/LimitParam'
+ *       - $ref: '#/components/parameters/DealStageParam'
+ *       - $ref: '#/components/parameters/StatusParam'
  *       - in: query
  *         name: customer
  *         schema:
@@ -326,7 +252,6 @@ router.route('/customers/:id').get(getCustomer).put(updateCustomer).delete(delet
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- *   
  *   post:
  *     summary: Create a new deal (External API)
  *     tags: [External API]
@@ -334,31 +259,7 @@ router.route('/customers/:id').get(getCustomer).put(updateCustomer).delete(delet
  *     security:
  *       - apiKeyAuth: []
  *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - title
- *               - customer
- *             properties:
- *               title:
- *                 type: string
- *               customer:
- *                 type: string
- *               value:
- *                 type: number
- *               currency:
- *                 type: string
- *               stage:
- *                 type: string
- *                 enum: [lead, qualified, proposal, negotiation, closed-won, closed-lost]
- *               probability:
- *                 type: number
- *               expectedCloseDate:
- *                 type: string
- *                 format: date-time
+ *       $ref: '#/components/requestBodies/DealBody'
  *     responses:
  *       201:
  *         description: Deal created successfully
@@ -373,11 +274,7 @@ router.route('/customers/:id').get(getCustomer).put(updateCustomer).delete(delet
  *                 data:
  *                   $ref: '#/components/schemas/Deal'
  *       400:
- *         description: Invalid input
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         description: Invalid or insufficient API key
  *         content:
@@ -403,12 +300,7 @@ router.route('/deals').get(getDeals).post(createDeal);
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Deal ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Deal details
@@ -430,7 +322,6 @@ router.route('/deals').get(getDeals).post(createDeal);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- *   
  *   put:
  *     summary: Update a deal (External API)
  *     tags: [External API]
@@ -438,36 +329,9 @@ router.route('/deals').get(getDeals).post(createDeal);
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Deal ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               value:
- *                 type: number
- *               currency:
- *                 type: string
- *               stage:
- *                 type: string
- *                 enum: [lead, qualified, proposal, negotiation, closed-won, closed-lost]
- *               status:
- *                 type: string
- *                 enum: [active, inactive]
- *               probability:
- *                 type: number
- *               expectedCloseDate:
- *                 type: string
- *                 format: date-time
+ *       $ref: '#/components/requestBodies/DealBody'
  *     responses:
  *       200:
  *         description: Deal updated successfully
@@ -495,7 +359,6 @@ router.route('/deals').get(getDeals).post(createDeal);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- *   
  *   delete:
  *     summary: Delete a deal (External API)
  *     tags: [External API]
@@ -503,12 +366,7 @@ router.route('/deals').get(getDeals).post(createDeal);
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Deal ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Deal deleted successfully

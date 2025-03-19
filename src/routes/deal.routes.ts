@@ -24,45 +24,17 @@ router.use(protect);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of items per page
- *       - in: query
- *         name: stage
- *         schema:
- *           type: string
- *           enum: [lead, qualified, proposal, negotiation, closed-won, closed-lost]
- *         description: Filter by deal stage
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [active, inactive]
- *         description: Filter by deal status
- *       - in: query
- *         name: assignedTo
- *         schema:
- *           type: string
- *         description: Filter by assigned user ID
+ *       - $ref: '#/components/parameters/PageParam'
+ *       - $ref: '#/components/parameters/LimitParam'
+ *       - $ref: '#/components/parameters/DealStageParam'
+ *       - $ref: '#/components/parameters/StatusParam'
+ *       - $ref: '#/components/parameters/AssignedToParam'
  *       - in: query
  *         name: customer
  *         schema:
  *           type: string
  *         description: Filter by customer ID
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: Search in title
+ *       - $ref: '#/components/parameters/SearchParam'
  *     responses:
  *       200:
  *         description: List of deals
@@ -85,7 +57,6 @@ router.use(protect);
  *                     $ref: '#/components/schemas/Deal'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
- * 
  *   post:
  *     summary: Create a new deal
  *     tags: [Deals]
@@ -93,70 +64,7 @@ router.use(protect);
  *     security:
  *       - bearerAuth: []
  *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - title
- *               - customer
- *             properties:
- *               title:
- *                 type: string
- *                 description: Deal title
- *               customer:
- *                 type: string
- *                 description: Customer ID
- *               value:
- *                 type: number
- *                 description: Deal value
- *               currency:
- *                 type: string
- *                 description: Currency code
- *                 default: USD
- *               stage:
- *                 type: string
- *                 description: Deal stage
- *                 enum: [lead, qualified, proposal, negotiation, closed-won, closed-lost]
- *                 default: lead
- *               status:
- *                 type: string
- *                 description: Deal status
- *                 enum: [active, inactive]
- *                 default: active
- *               probability:
- *                 type: number
- *                 description: Win probability percentage
- *               expectedCloseDate:
- *                 type: string
- *                 format: date-time
- *                 description: Expected close date
- *               assignedTo:
- *                 type: string
- *                 description: User ID to assign
- *               products:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     name:
- *                       type: string
- *                     price:
- *                       type: number
- *                     quantity:
- *                       type: number
- *               notes:
- *                 type: string
- *               customFields:
- *                 type: object
- *             example:
- *               title: "New Enterprise Deal"
- *               customer: "60d21b4667d0d8992e610c90"
- *               value: 50000
- *               currency: "USD"
- *               stage: "proposal"
- *               expectedCloseDate: "2023-08-30T00:00:00Z"
+ *       $ref: '#/components/requestBodies/DealBody'
  *     responses:
  *       201:
  *         description: Deal created successfully
@@ -171,11 +79,7 @@ router.use(protect);
  *                 data:
  *                   $ref: '#/components/schemas/Deal'
  *       400:
- *         description: Invalid input
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       404:
@@ -206,12 +110,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Deal ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Deal details
@@ -229,7 +128,6 @@ router
  *         $ref: '#/components/responses/NotFoundError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
- *   
  *   put:
  *     summary: Update a deal
  *     tags: [Deals]
@@ -237,55 +135,9 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Deal ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               customer:
- *                 type: string
- *               value:
- *                 type: number
- *               currency:
- *                 type: string
- *               stage:
- *                 type: string
- *                 enum: [lead, qualified, proposal, negotiation, closed-won, closed-lost]
- *               status:
- *                 type: string
- *                 enum: [active, inactive]
- *               probability:
- *                 type: number
- *               expectedCloseDate:
- *                 type: string
- *                 format: date-time
- *               assignedTo:
- *                 type: string
- *               products:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     name:
- *                       type: string
- *                     price:
- *                       type: number
- *                     quantity:
- *                       type: number
- *               notes:
- *                 type: string
- *               customFields:
- *                 type: object
+ *       $ref: '#/components/requestBodies/DealBody'
  *     responses:
  *       200:
  *         description: Deal updated successfully
@@ -303,7 +155,6 @@ router
  *         $ref: '#/components/responses/NotFoundError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
- * 
  *   delete:
  *     summary: Delete a deal
  *     tags: [Deals]
@@ -311,12 +162,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Deal ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Deal deleted successfully
@@ -348,12 +194,7 @@ router.route('/:id').get(getDeal).put(updateDeal).delete(deleteDeal);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Deal ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     requestBody:
  *       required: true
  *       content:

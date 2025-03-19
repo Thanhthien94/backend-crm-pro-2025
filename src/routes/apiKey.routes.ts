@@ -119,11 +119,7 @@ router.use(authorize('admin', 'superadmin'));
  *                       format: date-time
  *                       example: "2023-06-01T12:00:00Z"
  *       400:
- *         description: Invalid input
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
@@ -150,12 +146,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: API key ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: API key details
@@ -175,7 +166,6 @@ router
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
  *         $ref: '#/components/responses/ForbiddenError'
- *   
  *   put:
  *     summary: Update an API key
  *     tags: [API Keys]
@@ -183,12 +173,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: API key ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     requestBody:
  *       required: true
  *       content:
@@ -231,7 +216,6 @@ router
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
  *         $ref: '#/components/responses/ForbiddenError'
- *   
  *   delete:
  *     summary: Delete an API key
  *     tags: [API Keys]
@@ -239,12 +223,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: API key ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: API key deleted successfully
@@ -278,12 +257,7 @@ router.route('/:id').get(getApiKey).put(updateApiKey).delete(deleteApiKey);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: API key ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: API key revoked successfully
@@ -329,12 +303,7 @@ router.route('/:id/revoke').put(revokeApiKey);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: API key ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: API key regenerated successfully

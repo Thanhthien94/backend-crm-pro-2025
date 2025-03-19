@@ -721,4 +721,158 @@
  *         email: "john@example.com"
  *         password: "password123"
  *         organizationName: "My Organization"
+ *     Pagination:
+ *       type: object
+ *       properties:
+ *         total:
+ *           type: integer
+ *           description: Tổng số bản ghi
+ *           example: 100
+ *         page:
+ *           type: integer
+ *           description: Trang hiện tại
+ *           example: 1
+ *         pages:
+ *           type: integer
+ *           description: Tổng số trang
+ *           example: 10
+ *     Error:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: false
+ *         error:
+ *           type: string
+ *           description: Thông báo lỗi
+ *           example: Not authorized to access this route
+ *     DashboardStats:
+ *       type: object
+ *       properties:
+ *         customers:
+ *           type: object
+ *           properties:
+ *             total:
+ *               type: integer
+ *               example: 150
+ *             lead:
+ *               type: integer
+ *               example: 45
+ *             prospect:
+ *               type: integer
+ *               example: 35
+ *             customer:
+ *               type: integer
+ *               example: 65
+ *             churned:
+ *               type: integer
+ *               example: 5
+ *         deals:
+ *           type: object
+ *           properties:
+ *             total:
+ *               type: integer
+ *               example: 50
+ *             totalValue:
+ *               type: number
+ *               example: 250000
+ *             lead:
+ *               type: object
+ *               properties:
+ *                 count:
+ *                   type: integer
+ *                   example: 10
+ *                 value:
+ *                   type: number
+ *                   example: 50000
+ *             qualified:
+ *               type: object
+ *               properties:
+ *                 count:
+ *                   type: integer
+ *                   example: 12
+ *                 value:
+ *                   type: number
+ *                   example: 65000
+ *             proposal:
+ *               type: object
+ *               properties:
+ *                 count:
+ *                   type: integer
+ *                   example: 15
+ *                 value:
+ *                   type: number
+ *                   example: 80000
+ *             negotiation:
+ *               type: object
+ *               properties:
+ *                 count:
+ *                   type: integer
+ *                   example: 8
+ *                 value:
+ *                   type: number
+ *                   example: 45000
+ *             closed-won:
+ *               type: object
+ *               properties:
+ *                 count:
+ *                   type: integer
+ *                   example: 3
+ *                 value:
+ *                   type: number
+ *                   example: 15000
+ *             closed-lost:
+ *               type: object
+ *               properties:
+ *                 count:
+ *                   type: integer
+ *                   example: 2
+ *                 value:
+ *                   type: number
+ *                   example: 10000
+ *         tasks:
+ *           type: object
+ *           properties:
+ *             total:
+ *               type: integer
+ *               example: 75
+ *             pending:
+ *               type: integer
+ *               example: 30
+ *             in_progress:
+ *               type: integer
+ *               example: 20
+ *             completed:
+ *               type: integer
+ *               example: 20
+ *             canceled:
+ *               type: integer
+ *               example: 5
+ *             overdue:
+ *               type: integer
+ *               example: 10
+ *             dueToday:
+ *               type: integer
+ *               example: 8
+ *         forecast:
+ *           type: object
+ *           properties:
+ *             totalValue:
+ *               type: number
+ *               example: 350000
+ *             weightedValue:
+ *               type: number
+ *               example: 200000
+ *         recentActivity:
+ *           type: object
+ *           properties:
+ *             newCustomers:
+ *               type: integer
+ *               example: 15
+ *             newDeals:
+ *               type: integer
+ *               example: 10
+ *             closedDeals:
+ *               type: integer
+ *               example: 5 
  */

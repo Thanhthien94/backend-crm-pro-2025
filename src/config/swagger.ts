@@ -1,3 +1,4 @@
+// src/config/swagger.ts
 import swaggerJsdoc from 'swagger-jsdoc';
 const packageJson = require('../../package.json');
 const version = packageJson.version;
@@ -23,6 +24,11 @@ const options = {
           scheme: 'bearer',
           bearerFormat: 'JWT',
         },
+        apiKeyAuth: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'x-api-key',
+        },
       },
     },
     security: [
@@ -31,7 +37,11 @@ const options = {
       },
     ],
   },
-  apis: ['./src/routes/*.ts', './src/models/*.ts'],
+  apis: [
+    './src/routes/*.ts', 
+    './src/models/*.ts',
+    './src/swagger/*.ts' // Thêm đường dẫn này để tham chiếu các file Swagger mới
+  ],
 };
 
 const specs = swaggerJsdoc(options);

@@ -99,11 +99,7 @@ router.use(authorize('admin', 'superadmin'));
  *                 data:
  *                   $ref: '#/components/schemas/Webhook'
  *       400:
- *         description: Invalid input
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
@@ -131,12 +127,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Webhook ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Webhook details
@@ -156,7 +147,6 @@ router
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
  *         $ref: '#/components/responses/ForbiddenError'
- *   
  *   put:
  *     summary: Update a webhook
  *     tags: [Webhooks]
@@ -164,12 +154,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Webhook ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     requestBody:
  *       required: true
  *       content:
@@ -214,7 +199,6 @@ router
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
  *         $ref: '#/components/responses/ForbiddenError'
- *   
  *   delete:
  *     summary: Delete a webhook
  *     tags: [Webhooks]
@@ -222,12 +206,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Webhook ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Webhook deleted successfully
@@ -261,12 +240,7 @@ router.route('/:id').get(getWebhook).put(updateWebhook).delete(deleteWebhook);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Webhook ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Secret key reset successfully
@@ -303,12 +277,7 @@ router.route('/:id/reset-secret').post(resetWebhookSecret);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Webhook ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Test webhook sent successfully
@@ -332,11 +301,7 @@ router.route('/:id/reset-secret').post(resetWebhookSecret);
  *       404:
  *         $ref: '#/components/responses/NotFoundError'
  *       400:
- *         description: Failed to send test webhook
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:

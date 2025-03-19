@@ -104,11 +104,9 @@ router.route('/profile').put(updateProfile);
  *                   type: string
  *                   example: "Password updated successfully"
  *       401:
- *         description: Current password is incorrect
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
  */
 router
   .route('/updatepassword')
@@ -192,11 +190,7 @@ router.use(authorize('admin', 'superadmin'));
  *                     role:
  *                       type: string
  *       400:
- *         description: Invalid input or email already in use
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
@@ -225,12 +219,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: User details
@@ -258,12 +247,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     requestBody:
  *       required: true
  *       content:
@@ -298,6 +282,8 @@ router
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
  *         $ref: '#/components/responses/ForbiddenError'
+ *       400:
+ *         $ref: '#/components/responses/BadRequestError'
  *   
  *   delete:
  *     summary: Delete a user
@@ -306,12 +292,7 @@ router
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: User ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: User deleted successfully
@@ -327,11 +308,7 @@ router
  *                   type: object
  *                   example: {}
  *       400:
- *         description: Cannot delete your own account
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       404:
  *         $ref: '#/components/responses/NotFoundError'
  *       401:

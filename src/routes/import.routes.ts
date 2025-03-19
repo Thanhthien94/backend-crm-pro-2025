@@ -61,11 +61,7 @@ router.use(protect);
  *                         type: string
  *                       example: ["Row skipped: Missing name or email for entry: unknown"]
  *       400:
- *         description: Invalid file or format
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */

@@ -16,18 +16,8 @@ router.use(protect);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: type
- *         schema:
- *           type: string
- *           enum: [lead, prospect, customer, churned]
- *         description: Filter by customer type
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [active, inactive]
- *         description: Filter by customer status
+ *       - $ref: '#/components/parameters/CustomerTypeParam'
+ *       - $ref: '#/components/parameters/StatusParam'
  *     responses:
  *       200:
  *         description: CSV file containing customer data
@@ -39,11 +29,7 @@ router.use(protect);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       404:
- *         description: No customers found to export
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/NotFoundError'
  */
 router.route('/customers').get(exportCustomers);
 
@@ -57,23 +43,9 @@ router.route('/customers').get(exportCustomers);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: stage
- *         schema:
- *           type: string
- *           enum: [lead, qualified, proposal, negotiation, closed-won, closed-lost]
- *         description: Filter by deal stage
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [active, inactive]
- *         description: Filter by deal status
- *       - in: query
- *         name: assignedTo
- *         schema:
- *           type: string
- *         description: Filter by assigned user ID
+ *       - $ref: '#/components/parameters/DealStageParam'
+ *       - $ref: '#/components/parameters/StatusParam'
+ *       - $ref: '#/components/parameters/AssignedToParam'
  *     responses:
  *       200:
  *         description: CSV file containing deal data
@@ -85,11 +57,7 @@ router.route('/customers').get(exportCustomers);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       404:
- *         description: No deals found to export
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/NotFoundError'
  */
 router.route('/deals').get(exportDeals);
 
@@ -103,23 +71,9 @@ router.route('/deals').get(exportDeals);
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [pending, in_progress, completed, canceled]
- *         description: Filter by task status
- *       - in: query
- *         name: priority
- *         schema:
- *           type: string
- *           enum: [low, medium, high]
- *         description: Filter by task priority
- *       - in: query
- *         name: assignedTo
- *         schema:
- *           type: string
- *         description: Filter by assigned user ID
+ *       - $ref: '#/components/parameters/TaskStatusParam'
+ *       - $ref: '#/components/parameters/TaskPriorityParam'
+ *       - $ref: '#/components/parameters/AssignedToParam'
  *     responses:
  *       200:
  *         description: CSV file containing task data
@@ -131,11 +85,7 @@ router.route('/deals').get(exportDeals);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       404:
- *         description: No tasks found to export
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/NotFoundError'
  */
 router.route('/tasks').get(exportTasks);
 

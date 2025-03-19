@@ -47,11 +47,7 @@ router.use(protect);
  *                   items:
  *                     $ref: '#/components/schemas/CustomField'
  *       400:
- *         description: Invalid entity type
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
@@ -128,11 +124,7 @@ router.use(authorize('admin', 'superadmin'));
  *                 data:
  *                   $ref: '#/components/schemas/CustomField'
  *       400:
- *         description: Invalid input
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         $ref: '#/components/responses/BadRequestError'
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
@@ -164,12 +156,7 @@ router.route('/').post(
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Custom field ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     requestBody:
  *       required: true
  *       content:
@@ -217,7 +204,6 @@ router.route('/').post(
  *         $ref: '#/components/responses/UnauthorizedError'
  *       403:
  *         $ref: '#/components/responses/ForbiddenError'
- * 
  *   delete:
  *     summary: Delete a custom field
  *     tags: [Custom Fields]
@@ -225,12 +211,7 @@ router.route('/').post(
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Custom field ID
+ *       - $ref: '#/components/parameters/IdParam'
  *     responses:
  *       200:
  *         description: Custom field deleted successfully
