@@ -6,8 +6,7 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/errorHandler';
-import swaggerUi from 'swagger-ui-express';
-import specs from './config/swagger';
+import { setupSwaggerUI, swaggerAssetsCORS } from './middleware/swaggerUI';
 
 // Load env vars
 dotenv.config();
@@ -48,8 +47,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Cookie parser configuration
-app.use(cookieParser());
+// Swagger assets CORS
+app.use(swaggerAssetsCORS);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -78,8 +77,9 @@ app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/apikeys', apiKeyRoutes);
 app.use('/api/v1/api', apiRoutes);
 
+// Setup Swagger UI with custom styling
 if (process.env.NODE_ENV === 'development') {
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+  setupSwaggerUI(app);
 }
 
 // Health check
