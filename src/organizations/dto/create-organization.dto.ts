@@ -5,7 +5,7 @@ export class CreateOrganizationDto {
   @ApiProperty({ example: 'Acme Inc' })
   @IsNotEmpty()
   @IsString()
-  name: string;
+  name!: string;
 
   @ApiProperty({ example: 'acme.com' })
   @IsOptional()

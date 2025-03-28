@@ -23,7 +23,7 @@ export class User {
   })
   @IsNotEmpty()
   @MaxLength(50)
-  name: string;
+  name!: string;
 
   @Prop({
     required: true,
@@ -31,7 +31,7 @@ export class User {
   })
   @IsNotEmpty()
   @IsEmail({}, { message: 'Please add a valid email' })
-  email: string;
+  email!: string;
 
   @Prop({
     required: true,
@@ -40,7 +40,7 @@ export class User {
   @IsNotEmpty()
   @MinLength(6, { message: 'Password must be at least 6 characters long' })
   @Exclude()
-  password: string;
+  password!: string;
 
   @Prop({
     enum: ['user', 'admin', 'superadmin'],
@@ -49,20 +49,20 @@ export class User {
   @IsEnum(['user', 'admin', 'superadmin'], {
     message: 'Role must be either user, admin, or superadmin',
   })
-  role: string;
+  role!: string;
 
   @Prop({
     type: Types.ObjectId,
     ref: 'Organization',
     required: true,
   })
-  organization: Types.ObjectId;
+  organization!: Types.ObjectId;
 
   @Prop({
     default: true,
   })
   @IsBoolean()
-  isActive: boolean;
+  isActive!: boolean;
 
   @Prop()
   passwordResetToken?: string;

@@ -5,7 +5,7 @@ export class ResetPasswordDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
-  token: string;
+  token!: string;
 
   @ApiProperty({
     example: 'NewPassword123!',
@@ -15,5 +15,5 @@ export class ResetPasswordDto {
   @IsNotEmpty()
   @MinLength(6, { message: 'Password must be at least 6 characters' })
   @Matches(/\d/, { message: 'Password must contain at least one number' })
-  password: string;
+  password!: string;
 }

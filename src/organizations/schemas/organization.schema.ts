@@ -1,73 +1,42 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import {
-  IsNotEmpty,
-  MaxLength,
-  IsOptional,
-  IsEnum,
-  IsBoolean,
-} from 'class-validator';
-
-export type OrganizationDocument = Organization & Document;
-
-// Define settings interface
-export interface OrganizationSettings {
-  theme: string;
-  notifications: boolean;
-  modules: {
-    customers: boolean;
-    deals: boolean;
-    tasks: boolean;
-    reports: boolean;
-    [key: string]: boolean;
-  };
-}
 
 @Schema({ timestamps: true })
 export class Organization {
-  // ID field is added by Mongoose but we need to declare it for TypeScript
-  _id?: string;
   @Prop({
-    required: true,
+    required: [true, 'Please add organization name'],
     trim: true,
-    maxlength: 100,
+    maxlength: [100, 'Name cannot be more than 100 characters'],
   })
-  @IsNotEmpty()
-  @MaxLength(100)
   name!: string;
 
   @Prop({
     trim: true,
     unique: true,
   })
-  @IsNotEmpty()
   domain!: string;
 
   @Prop({
     trim: true,
   })
-  @IsOptional()
   address?: string;
 
   @Prop({
     trim: true,
   })
-  @IsOptional()
   phone?: string;
 
   @Prop({
+    type: String,
     enum: ['free', 'basic', 'pro', 'enterprise'],
     default: 'free',
-  })
-  @IsEnum(['free', 'basic', 'pro', 'enterprise'], {
-    message: 'Plan must be either free, basic, pro, or enterprise',
   })
   plan!: string;
 
   @Prop({
+    type: Boolean,
     default: true,
   })
-  @IsBoolean()
   isActive!: boolean;
 
   @Prop({
@@ -83,7 +52,8 @@ export class Organization {
       },
     },
   })
-  settings!: OrganizationSettings;
+  settings!: Record<string, any>;
 }
 
+export type OrganizationDocument = Organization & Document;
 export const OrganizationSchema = SchemaFactory.createForClass(Organization);
