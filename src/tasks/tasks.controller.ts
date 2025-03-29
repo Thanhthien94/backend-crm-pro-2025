@@ -83,10 +83,15 @@ export class TasksController {
     @Query('customerId') customerId?: string,
     @Query('dealId') dealId?: string,
     @Query('search') search?: string,
-    @Query('dueBefore', ParseDatePipe) dueBefore?: Date,
-    @Query('dueAfter', ParseDatePipe) dueAfter?: Date,
-    @Query('isOverdue') isOverdue?: boolean,
+    @Query('dueBefore', new ParseDatePipe()) dueBefore?: Date,
+    @Query('dueAfter', new ParseDatePipe()) dueAfter?: Date,
+    @Query('isOverdue') isOverdue?: string | boolean,
   ) {
+    // Cải thiện xử lý giá trị isOverdue
+    const isOverdueBool =
+      isOverdue === true ||
+      (typeof isOverdue === 'string' && isOverdue.toLowerCase() === 'true');
+
     const filters = {
       status,
       priority,
@@ -96,7 +101,7 @@ export class TasksController {
       search,
       dueBefore,
       dueAfter,
-      isOverdue: isOverdue === true || (typeof isOverdue === 'string' && isOverdue === 'true'),
+      isOverdue: isOverdueBool,
     };
 
     const { tasks, total } = await this.tasksService.findAll(

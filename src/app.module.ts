@@ -21,6 +21,8 @@ import { ImportModule } from './import/import.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggerService } from './common/services/logger.service';
+import { PermissionsModule } from './permissions/permissions.module';
+import { PoliciesModule } from './policies/policies.module';
 
 import configuration from './config/configuration';
 
@@ -57,6 +59,8 @@ import configuration from './config/configuration';
     ImportModule,
     WebhookModule,
     ProductsModule,
+    PermissionsModule,
+    PoliciesModule,
   ],
   controllers: [AppController],
   providers: [

@@ -18,7 +18,6 @@ export class ApiKey {
   @Prop({
     required: true,
     unique: true,
-    index: true,
   })
   key!: string;
 

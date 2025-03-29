@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Request,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,6 +23,9 @@ import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequestWithUser } from '../common/interfaces/request-with-user.interface';
+import { AccessControl } from '../access-control/decorators/access-control.decorator';
+import { AccessControlGuard } from '../access-control/guards/access-control.guard';
+import { ResourceInterceptor } from '../policies/interceptors/resource.interceptor';
 
 @ApiTags('customers')
 @Controller('customers')
@@ -30,8 +34,13 @@ export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new customer' })
-  @ApiResponse({ status: 201, description: 'Customer created successfully.' })
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'create')
+  @ApiOperation({ summary: 'Tạo khách hàng mới' })
+  @ApiResponse({
+    status: 201,
+    description: 'Khách hàng đã được tạo thành công.',
+  })
   @ApiBearerAuth()
   async create(
     @Body() createCustomerDto: CreateCustomerDto,
@@ -50,8 +59,10 @@ export class CustomersController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all customers' })
-  @ApiResponse({ status: 200, description: 'Returns all customers.' })
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'read')
+  @ApiOperation({ summary: 'Lấy danh sách khách hàng' })
+  @ApiResponse({ status: 200, description: 'Trả về tất cả khách hàng.' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({
@@ -95,9 +106,12 @@ export class CustomersController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a single customer' })
-  @ApiResponse({ status: 200, description: 'Returns customer details.' })
-  @ApiResponse({ status: 404, description: 'Customer not found.' })
+  @UseInterceptors(ResourceInterceptor)
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'read')
+  @ApiOperation({ summary: 'Lấy thông tin chi tiết khách hàng' })
+  @ApiResponse({ status: 200, description: 'Trả về thông tin khách hàng.' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy khách hàng.' })
   @ApiBearerAuth()
   async findOne(@Param('id') id: string, @Request() req: RequestWithUser) {
     const customer = await this.customersService.findById(
@@ -112,9 +126,15 @@ export class CustomersController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a customer' })
-  @ApiResponse({ status: 200, description: 'Customer updated successfully.' })
-  @ApiResponse({ status: 404, description: 'Customer not found.' })
+  @UseInterceptors(ResourceInterceptor)
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'update')
+  @ApiOperation({ summary: 'Cập nhật thông tin khách hàng' })
+  @ApiResponse({
+    status: 200,
+    description: 'Khách hàng đã được cập nhật thành công.',
+  })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy khách hàng.' })
   @ApiBearerAuth()
   async update(
     @Param('id') id: string,
@@ -134,9 +154,15 @@ export class CustomersController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a customer' })
-  @ApiResponse({ status: 200, description: 'Customer deleted successfully.' })
-  @ApiResponse({ status: 404, description: 'Customer not found.' })
+  @UseInterceptors(ResourceInterceptor)
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'delete')
+  @ApiOperation({ summary: 'Xóa khách hàng' })
+  @ApiResponse({
+    status: 200,
+    description: 'Khách hàng đã được xóa thành công.',
+  })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy khách hàng.' })
   @ApiBearerAuth()
   async remove(@Param('id') id: string, @Request() req: RequestWithUser) {
     await this.customersService.remove(id, req.user.organization.toString());
@@ -144,6 +170,188 @@ export class CustomersController {
     return {
       success: true,
       data: {},
+    };
+  }
+
+  @Get('by-type/:type')
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'read')
+  @ApiOperation({ summary: 'Lấy khách hàng theo loại' })
+  @ApiResponse({ status: 200, description: 'Trả về khách hàng theo loại.' })
+  @ApiBearerAuth()
+  async findByType(
+    @Param('type') type: string,
+    @Request() req: RequestWithUser,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    const filters = { type };
+    const { customers, total } = await this.customersService.findAll(
+      req.user.organization.toString(),
+      filters,
+      +page,
+      +limit,
+    );
+
+    return {
+      success: true,
+      count: customers.length,
+      pagination: {
+        total,
+        page: +page,
+        pages: Math.ceil(total / +limit),
+      },
+      data: customers,
+    };
+  }
+
+  @Get('assigned-to/me')
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'read')
+  @ApiOperation({ summary: 'Lấy khách hàng được gán cho người dùng hiện tại' })
+  @ApiResponse({ status: 200, description: 'Trả về khách hàng được gán.' })
+  @ApiBearerAuth()
+  async findAssignedToMe(
+    @Request() req: RequestWithUser,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    const filters: any = {
+      assignedTo: req.user._id?.toString(),
+    };
+
+    const { customers, total } = await this.customersService.findAll(
+      req.user.organization.toString(),
+      filters,
+      +page,
+      +limit,
+    );
+
+    return {
+      success: true,
+      count: customers.length,
+      pagination: {
+        total,
+        page: +page,
+        pages: Math.ceil(total / +limit),
+      },
+      data: customers,
+    };
+  }
+
+  @Patch(':id/assign')
+  @UseInterceptors(ResourceInterceptor)
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'assign')
+  @ApiOperation({ summary: 'Gán khách hàng cho người dùng' })
+  @ApiResponse({
+    status: 200,
+    description: 'Khách hàng đã được gán thành công.',
+  })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy khách hàng.' })
+  @ApiBearerAuth()
+  async assignCustomer(
+    @Param('id') id: string,
+    @Body('assignedTo') assignedTo: string,
+    @Request() req: RequestWithUser,
+  ) {
+    const customer = await this.customersService.update(
+      id,
+      { assignedTo },
+      req.user.organization.toString(),
+    );
+
+    return {
+      success: true,
+      data: customer,
+    };
+  }
+
+  @Get('stats/by-type')
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'read')
+  @ApiOperation({ summary: 'Lấy thống kê khách hàng theo loại' })
+  @ApiResponse({ status: 200, description: 'Trả về thống kê khách hàng.' })
+  @ApiBearerAuth()
+  async getStatsByType(
+    @Request() req: RequestWithUser,
+  ): Promise<{ success: boolean; data: any }> {
+    const stats = await this.customersService.getStatsByType(
+      req.user.organization.toString(),
+    );
+
+    return {
+      success: true,
+      data: stats,
+    };
+  }
+
+  @Get('recent/created')
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'read')
+  @ApiOperation({ summary: 'Lấy khách hàng được tạo gần đây' })
+  @ApiResponse({ status: 200, description: 'Trả về khách hàng gần đây.' })
+  @ApiBearerAuth()
+  async getRecentlyCreated(
+    @Request() req: RequestWithUser,
+    @Query('limit') limit = 5,
+  ) {
+    const customers = await this.customersService.getRecentlyCreated(
+      req.user.organization.toString(),
+      +limit,
+    );
+
+    return {
+      success: true,
+      count: customers.length,
+      data: customers,
+    };
+  }
+
+  @Post('bulk-delete')
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'delete')
+  @ApiOperation({ summary: 'Xóa nhiều khách hàng' })
+  @ApiResponse({
+    status: 200,
+    description: 'Các khách hàng đã được xóa thành công.',
+  })
+  @ApiBearerAuth()
+  async bulkDelete(
+    @Body('ids') ids: string[],
+    @Request() req: RequestWithUser,
+  ) {
+    const result = await this.customersService.bulkDelete(
+      ids,
+      req.user.organization.toString(),
+    );
+
+    return {
+      success: true,
+      data: {
+        deletedCount: result.deletedCount,
+      },
+    };
+  }
+
+  @Post('import-validate')
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'create')
+  @ApiOperation({ summary: 'Kiểm tra dữ liệu nhập khẩu' })
+  @ApiResponse({ status: 200, description: 'Dữ liệu hợp lệ.' })
+  @ApiBearerAuth()
+  async validateImportData(
+    @Body() data: any[],
+    @Request() req: RequestWithUser,
+  ) {
+    const validationResult = await this.customersService.validateImportData(
+      data,
+      req.user.organization.toString(),
+    );
+
+    return {
+      success: validationResult.valid,
+      data: validationResult,
     };
   }
 }

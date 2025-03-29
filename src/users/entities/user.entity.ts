@@ -9,13 +9,14 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { Role } from 'src/permissions/schemas/role.schema';
 
 export type UserDocument = User & Document;
 
 @Schema({ timestamps: true })
 export class User {
   // ID field is added by Mongoose but we need to declare it for TypeScript
-  _id?: string;
+  _id?: Types.ObjectId;
   @Prop({
     required: true,
     trim: true,
@@ -69,6 +70,12 @@ export class User {
 
   @Prop()
   passwordResetExpires?: Date;
+
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'Role',
+  })
+  roles!: Role[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

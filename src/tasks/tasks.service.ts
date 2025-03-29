@@ -1,3 +1,4 @@
+// src/tasks/tasks.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -52,19 +53,27 @@ export class TasksService {
     if (filters.customerId) query.customer = filters.customerId;
     if (filters.dealId) query.deal = filters.dealId;
 
-    // Handle date filters
-    if (!query.dueDate) query.dueDate = {};
-    if (filters.dueBefore) query.dueDate.$lt = filters.dueBefore;
-    if (filters.dueAfter) query.dueDate.$gt = filters.dueAfter;
+    // Xử lý bộ lọc theo ngày, kiểm tra giá trị hợp lệ
+    if (filters.dueBefore instanceof Date || filters.dueAfter instanceof Date) {
+      query.dueDate = {};
 
-    // Handle overdue tasks
+      if (filters.dueBefore instanceof Date) {
+        query.dueDate.$lt = filters.dueBefore;
+      }
+
+      if (filters.dueAfter instanceof Date) {
+        query.dueDate.$gt = filters.dueAfter;
+      }
+    }
+
+    // Xử lý các task quá hạn
     if (filters.isOverdue) {
       query.status = { $in: ['todo', 'in_progress'] };
       if (!query.dueDate) query.dueDate = {};
       query.dueDate.$lt = new Date();
     }
 
-    // Handle search filter
+    // Xử lý bộ lọc tìm kiếm
     if (filters.search) {
       query.$or = [
         { title: { $regex: filters.search, $options: 'i' } },
@@ -83,7 +92,7 @@ export class TasksService {
       .populate('deal', 'name value stage')
       .skip(startIndex)
       .limit(limit)
-      .sort({ dueDate: 1 }); // Sort by due date ascending
+      .sort({ dueDate: 1 }); // Sắp xếp theo dueDate tăng dần
 
     return { tasks, total };
   }
