@@ -24,6 +24,30 @@ async function bootstrap() {
     }),
   );
 
+  // CORS
+  const corsOrigins = configService.get<string[]>('cors.origins');
+  console.log('CORS origins:', corsOrigins);
+  app.enableCors({
+    origin: configService.get<string[]>('cors.origins'),
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+      'content-type',
+      'authorization',
+      'x-client-time',
+      'x-has-token',
+      'x-requested-with',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Credentials',
+      'Access-Control-Allow-Headers',
+    ],
+    exposedHeaders: [
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Credentials',
+      'Access-Control-Allow-Headers',
+    ],
+  });
+
   // Middleware
   app.use(cookieParser());
   app.use(
@@ -31,14 +55,6 @@ async function bootstrap() {
       crossOriginResourcePolicy: false,
     }),
   );
-
-  // CORS
-  app.enableCors({
-    origin: configService.get<string[]>('cors.origins'),
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  });
 
   // Prefix all routes
   app.setGlobalPrefix('api/v1');
