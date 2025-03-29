@@ -35,6 +35,7 @@ export class CustomFieldsService {
     return this.customFieldModel
       .find(query)
       .sort({ displayOrder: 1, createdAt: 1 })
+      .lean() // Added lean() for better performance
       .exec();
   }
 
@@ -139,6 +140,7 @@ export class CustomFieldsService {
         active: true,
       })
       .sort({ displayOrder: 1, createdAt: 1 })
+      .lean() // Added lean() for better performance
       .exec();
   }
 

@@ -23,14 +23,17 @@ export class WebhookService {
     return this.webhookModel
       .find({ organization: organizationId })
       .populate('createdBy', 'name email')
-      .exec();
+      .sort({ createdAt: -1 })
+      .lean() // Use lean for better performance
+      .exec(); // Moved exec() to the end of the chain
   }
 
   async findOne(id: string, organizationId: string): Promise<WebhookDocument> {
     const webhook = await this.webhookModel
       .findOne({ _id: id, organization: organizationId })
       .populate('createdBy', 'name email')
-      .exec();
+      .lean() // Added lean() for better performance
+      .exec(); // Moved exec() to the end of the chain
 
     if (!webhook) {
       throw new Error('Webhook not found');

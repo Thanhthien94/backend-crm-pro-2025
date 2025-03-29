@@ -84,6 +84,17 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
+    console.log('User found:', user);
+    // Check if user is active
+    if (!user.isActive) {
+      throw new UnauthorizedException('User account is suspended');
+    }
+    // check origination
+    if (!user.organization) {
+      throw new UnauthorizedException(
+        'User does not belong to any organization',
+      );
+    }
 
     // Get organization info
     const organization = await this.organizationsService.findById(

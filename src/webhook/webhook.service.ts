@@ -24,6 +24,8 @@ export class WebhookService {
     return this.webhookModel
       .find({ organization: organizationId })
       .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 })
+      .lean()
       .exec();
   }
 
@@ -31,6 +33,7 @@ export class WebhookService {
     const webhook = await this.webhookModel
       .findOne({ _id: id, organization: organizationId })
       .populate('createdBy', 'name email')
+      .lean() // Added lean() for better performance
       .exec();
 
     if (!webhook) {

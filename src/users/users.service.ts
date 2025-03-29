@@ -27,11 +27,11 @@ export class UsersService {
   }
 
   async findAll(organizationId: string): Promise<User[]> {
-    return this.userModel.find({ organization: organizationId }).exec();
+    return this.userModel.find({ organization: organizationId }).lean().exec();
   }
 
   async findById(id: string): Promise<User> {
-    const user = await this.userModel.findById(id).exec();
+    const user = await this.userModel.findById(id).lean().exec(); // Added lean() for better performance
 
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
@@ -41,13 +41,13 @@ export class UsersService {
   }
 
   async findByEmail(email: string, includePassword = false): Promise<User> {
-    let query = this.userModel.findOne({ email });
+    let query = this.userModel.findOne({ email }).lean(); // Added lean() for better performance
 
     if (includePassword) {
       query = query.select('+password') as typeof query;
     }
 
-    const user = await query.exec();
+    const user = await query.lean().exec();
 
     if (!user) {
       throw new NotFoundException(`User with email ${email} not found`);
@@ -70,12 +70,13 @@ export class UsersService {
       query = query.select('+password') as typeof query;
     }
 
-    return query.exec();
+    return query.lean().exec();
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.userModel
       .findByIdAndUpdate(id, updateUserDto, { new: true })
+      .lean()
       .exec();
 
     if (!user) {
@@ -86,7 +87,7 @@ export class UsersService {
   }
 
   async remove(id: string): Promise<boolean> {
-    const result = await this.userModel.deleteOne({ _id: id }).exec();
+    const result = await this.userModel.deleteOne({ _id: id }).lean().exec();
     return result.deletedCount > 0;
   }
 

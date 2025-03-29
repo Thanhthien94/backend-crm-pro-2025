@@ -24,7 +24,10 @@ export class OrganizationsService {
   }
 
   async findById(id: string): Promise<Organization> {
-    const organization = await this.organizationModel.findById(id).exec();
+    const organization = await this.organizationModel
+      .findById(id)
+      .lean()
+      .exec();
 
     if (!organization) {
       throw new NotFoundException(`Organization with ID ${id} not found`);
@@ -39,6 +42,7 @@ export class OrganizationsService {
   ): Promise<Organization> {
     const organization = await this.organizationModel
       .findByIdAndUpdate(id, updateOrganizationDto, { new: true })
+      .lean() // Added lean() for better performance
       .exec();
 
     if (!organization) {
@@ -52,7 +56,10 @@ export class OrganizationsService {
     id: string,
     updateSettingsDto: UpdateSettingsDto,
   ): Promise<Organization> {
-    const organization = await this.organizationModel.findById(id).exec();
+    const organization = await this.organizationModel
+      .findById(id)
+      .lean()
+      .exec();
 
     if (!organization) {
       throw new NotFoundException(`Organization with ID ${id} not found`);

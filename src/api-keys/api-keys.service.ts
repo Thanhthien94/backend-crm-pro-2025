@@ -17,13 +17,15 @@ export class ApiKeysService {
       .find({ organization: organizationId })
       .populate('createdBy', 'name email')
       .sort({ createdAt: -1 })
+      .lean() // Use lean for better performance
       .exec();
   }
 
   async findById(id: string, organizationId: string): Promise<ApiKeyDocument> {
     const apiKey = await this.apiKeyModel
       .findOne({ _id: id, organization: organizationId })
-      .populate('createdBy', 'name email');
+      .populate('createdBy', 'name email')
+      .lean(); // Added lean() for better performance
 
     if (!apiKey) {
       throw new NotFoundException(`API key with ID ${id} not found`);
@@ -80,20 +82,26 @@ export class ApiKeysService {
         new: true,
         runValidators: true,
       })
-      .populate('createdBy', 'name email');
+      .populate('createdBy', 'name email')
+      .lean();
 
     if (!apiKey) {
       throw new NotFoundException(`API key with ID ${id} not found`);
     }
 
+    console.log('Updated API key:', apiKey);
+
     return apiKey;
   }
 
   async remove(id: string, organizationId: string): Promise<boolean> {
-    const result = await this.apiKeyModel.deleteOne({
-      _id: id,
-      organization: organizationId,
-    });
+    const result = await this.apiKeyModel
+      .deleteOne({
+        _id: id,
+        organization: organizationId,
+      })
+      .lean()
+      .exec(); // Added lean() for better performance
 
     if (result.deletedCount === 0) {
       throw new NotFoundException(`API key with ID ${id} not found`);
