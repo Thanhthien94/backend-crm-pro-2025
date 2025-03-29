@@ -62,6 +62,20 @@ export class ApiKey {
     default: 'API key from Node.js app',
   })
   description?: string;
+
+  @Prop({
+    type: [
+      {
+        resource: { type: String, required: true },
+        actions: { type: [String], required: true },
+      },
+    ],
+    default: [],
+  })
+  resourcePermissions!: Array<{
+    resource: string;
+    actions: string[];
+  }>;
 }
 
 export type ApiKeyDocument = ApiKey & Document;

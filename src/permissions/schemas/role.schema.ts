@@ -48,3 +48,11 @@ export const RoleSchema = SchemaFactory.createForClass(Role);
 
 // Thêm index
 RoleSchema.index({ slug: 1, organization: 1 }, { unique: true });
+RoleSchema.index({ organization: 1 });
+
+// Thêm methods
+RoleSchema.methods.toJSON = function () {
+  const obj = this.toObject();
+  delete obj.__v;
+  return obj;
+};

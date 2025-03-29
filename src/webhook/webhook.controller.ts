@@ -24,6 +24,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RequestWithUser } from '../common/interfaces/request-with-user.interface';
+import { AccessControl } from 'src/access-control/decorators/access-control.decorator';
+import { AccessControlGuard } from 'src/access-control/guards/access-control.guard';
 
 @ApiTags('webhooks')
 @Controller('webhooks')
@@ -33,6 +35,8 @@ import { RequestWithUser } from '../common/interfaces/request-with-user.interfac
 export class WebhookController {
   constructor(private readonly webhookService: WebhookService) {}
 
+  @UseGuards(AccessControlGuard)
+  @AccessControl('webhook', 'create')
   @Post()
   @ApiOperation({ summary: 'Create a new webhook' })
   @ApiResponse({ status: 201, description: 'Webhook created successfully.' })

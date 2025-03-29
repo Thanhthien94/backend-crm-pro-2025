@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
@@ -8,7 +8,8 @@ import {
   ActionType,
 } from './schemas/permission.schema';
 import { Role, RoleDocument } from './schemas/role.schema';
-import { User } from '../users/entities/user.entity';
+import { User, UserDocument } from '../users/entities/user.entity';
+import { UpdateRoleDto } from './dto/update-role.dto';
 
 @Injectable()
 export class PermissionsService {
@@ -16,6 +17,7 @@ export class PermissionsService {
     @InjectModel(Permission.name)
     private permissionModel: Model<PermissionDocument>,
     @InjectModel(Role.name) private roleModel: Model<RoleDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {
     this.seedDefaultPermissions();
   }
@@ -84,22 +86,13 @@ export class PermissionsService {
     return false;
   }
 
-  // Tạo role mới
-  async createRole(data: {
-    name: string;
-    slug: string;
-    organization: string;
-    permissions: string[];
-    description?: string;
-    isDefault?: boolean;
-  }): Promise<RoleDocument> {
-    const role = new this.roleModel(data);
-    return role.save();
-  }
-
   // Lấy tất cả quyền
   async getAllPermissions(): Promise<PermissionDocument[]> {
-    return this.permissionModel.find().sort({ resource: 1, action: 1 }).exec();
+    return this.permissionModel
+      .find()
+      .sort({ resource: 1, action: 1 })
+      .lean()
+      .exec();
   }
 
   // Lấy tất cả role của organization
@@ -108,7 +101,155 @@ export class PermissionsService {
   ): Promise<RoleDocument[]> {
     return this.roleModel
       .find({ organization: organizationId })
-      .populate('permissions')
+      .select('name slug description isDefault')
+      .populate('permissions', 'name resource action')
       .exec();
+  }
+
+  async createRole(data: {
+    name: string;
+    slug: string;
+    organization: string;
+    permissions: string[];
+    description?: string;
+    isDefault?: boolean;
+  }): Promise<RoleDocument> {
+    // Kiểm tra slug đã tồn tại chưa
+    const existingRole = await this.roleModel.findOne({
+      slug: data.slug,
+      organization: data.organization,
+    });
+
+    if (existingRole) {
+      throw new Error(`Role with slug "${data.slug}" already exists`);
+    }
+
+    const role = new this.roleModel(data);
+    return role.save();
+  }
+
+  async updateRole(
+    id: string,
+    updateRoleDto: UpdateRoleDto,
+    organizationId: string,
+  ): Promise<RoleDocument> {
+    // Kiểm tra nếu slug thay đổi và đã tồn tại
+    if (updateRoleDto.slug) {
+      const existingRole = await this.roleModel.findOne({
+        slug: updateRoleDto.slug,
+        organization: organizationId,
+        _id: { $ne: id },
+      });
+
+      if (existingRole) {
+        throw new Error(
+          `Role with slug "${updateRoleDto.slug}" already exists`,
+        );
+      }
+    }
+
+    const role = await this.roleModel
+      .findOneAndUpdate(
+        { _id: id, organization: organizationId },
+        updateRoleDto,
+        { new: true },
+      )
+      .populate('permissions');
+
+    if (!role) {
+      throw new NotFoundException(`Role with ID ${id} not found`);
+    }
+
+    return role;
+  }
+
+  async deleteRole(id: string, organizationId: string): Promise<boolean> {
+    // Kiểm tra nếu có người dùng đang sử dụng role này
+    const usersWithRole = await this.userModel.countDocuments({
+      roles: id,
+    });
+
+    if (usersWithRole > 0) {
+      throw new Error(
+        `Cannot delete role because it is assigned to ${usersWithRole} users`,
+      );
+    }
+
+    const result = await this.roleModel.deleteOne({
+      _id: id,
+      organization: organizationId,
+    });
+
+    if (result.deletedCount === 0) {
+      throw new NotFoundException(`Role with ID ${id} not found`);
+    }
+
+    return true;
+  }
+
+  async assignRoleToUser(
+    roleId: string,
+    userId: string,
+    organizationId: string,
+  ): Promise<void> {
+    // Kiểm tra role có tồn tại không
+    const role = await this.roleModel.findOne({
+      _id: roleId,
+      organization: organizationId,
+    });
+
+    if (!role) {
+      throw new NotFoundException(`Role with ID ${roleId} not found`);
+    }
+
+    // Kiểm tra user có tồn tại không
+    const user = await this.userModel.findOne({
+      _id: userId,
+      organization: organizationId,
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    // Thêm role vào user nếu chưa có
+    if (!user.roles.some(role => role.toString() === roleId)) {
+      await this.userModel.updateOne(
+        { _id: userId },
+        { $addToSet: { roles: roleId } },
+      );
+    }
+  }
+
+  async revokeRoleFromUser(
+    roleId: string,
+    userId: string,
+    organizationId: string,
+  ): Promise<void> {
+    // Kiểm tra role có tồn tại không
+    const role = await this.roleModel.findOne({
+      _id: roleId,
+      organization: organizationId,
+    });
+
+    if (!role) {
+      throw new NotFoundException(`Role with ID ${roleId} not found`);
+    }
+
+    // Kiểm tra user có tồn tại không
+    const user = await this.userModel.findOne({
+      _id: userId,
+      organization: organizationId,
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    // Xóa role khỏi user
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $pull: { roles: roleId } },
+    );
   }
 }

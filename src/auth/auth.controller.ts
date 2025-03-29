@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import * as crypto from 'crypto';
 import { AuthService, AuthResponse, MeResponse } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -103,5 +104,28 @@ export class AuthController {
     };
 
     res.cookie('token', token, cookieOptions);
+  }
+
+  @Get('csrf-token')
+  @ApiOperation({ summary: 'Get CSRF token' })
+  @ApiResponse({ status: 200, description: 'CSRF token generated.' })
+  generateCsrfToken(@Res({ passthrough: true }) res: Response) {
+    // Tạo token ngẫu nhiên
+    const token = crypto.randomBytes(32).toString('hex');
+
+    // Lưu trong cookie
+    res.cookie('XSRF-TOKEN', token, {
+      httpOnly: false, // Cho phép JavaScript truy cập token
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    return {
+      success: true,
+      data: {
+        token,
+      },
+    };
   }
 }

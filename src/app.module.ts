@@ -23,8 +23,11 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { LoggerService } from './common/services/logger.service';
 import { PermissionsModule } from './permissions/permissions.module';
 import { PoliciesModule } from './policies/policies.module';
+import { AccessControlModule } from './access-control/access-control.module';
 
 import configuration from './config/configuration';
+import { ApiKeyPermissionGuard } from './common/guards';
+import { AccessControlGuard } from './access-control/guards/access-control.guard';
 
 @Module({
   imports: [
@@ -61,6 +64,7 @@ import configuration from './config/configuration';
     ProductsModule,
     PermissionsModule,
     PoliciesModule,
+    AccessControlModule,
   ],
   controllers: [AppController],
   providers: [
@@ -73,6 +77,14 @@ import configuration from './config/configuration';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ApiKeyPermissionGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AccessControlGuard,
     },
   ],
 })

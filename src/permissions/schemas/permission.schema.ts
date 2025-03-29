@@ -63,3 +63,11 @@ export const PermissionSchema = SchemaFactory.createForClass(Permission);
 
 // Thêm index
 PermissionSchema.index({ resource: 1, action: 1 }, { unique: true });
+PermissionSchema.index({ slug: 1 }, { unique: true });
+
+// Thêm methods
+PermissionSchema.methods.toJSON = function () {
+  const obj = this.toObject();
+  delete obj.__v;
+  return obj;
+};

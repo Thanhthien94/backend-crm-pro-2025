@@ -22,6 +22,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RequestWithUser } from '../common/interfaces/request-with-user.interface';
+import { RateLimit } from 'src/common/decorators/rate-limit.decorator';
+import { RateLimitGuard } from 'src/common/guards/rate-limit.guard';
 
 @ApiTags('api-keys')
 @Controller('api-keys')
@@ -32,6 +34,8 @@ export class ApiKeysController {
   constructor(private readonly apiKeysService: ApiKeysService) {}
 
   @Post()
+  @RateLimit(5, 60) // Giới hạn 5 request mỗi 60 giây
+  @UseGuards(RateLimitGuard)
   @ApiOperation({ summary: 'Create a new API key' })
   @ApiResponse({ status: 201, description: 'API key created successfully.' })
   @ApiBearerAuth()
@@ -102,6 +106,7 @@ export class ApiKeysController {
       id,
       updateApiKeyDto,
       req.user.organization.toString(),
+      req.user._id?.toString() || '',
     );
 
     return {
@@ -116,7 +121,11 @@ export class ApiKeysController {
   @ApiResponse({ status: 404, description: 'API key not found.' })
   @ApiBearerAuth()
   async remove(@Param('id') id: string, @Request() req: RequestWithUser) {
-    await this.apiKeysService.remove(id, req.user.organization.toString());
+    await this.apiKeysService.remove(
+      id,
+      req.user.organization.toString(),
+      req.user._id?.toString() || '',
+    );
 
     return {
       success: true,
@@ -136,6 +145,7 @@ export class ApiKeysController {
     const { apiKey, generatedKey } = await this.apiKeysService.regenerateKey(
       id,
       req.user.organization.toString(),
+      req.user._id?.toString() || '',
     );
 
     return {
@@ -145,6 +155,36 @@ export class ApiKeysController {
         key: generatedKey, // Only time the full key is returned
       },
       message: 'Store this API key securely, it will not be shown again.',
+    };
+  }
+
+  @Patch(':id/permissions')
+  @ApiOperation({ summary: 'Update API key resource permissions' })
+  @ApiResponse({
+    status: 200,
+    description: 'API key permissions updated successfully.',
+  })
+  @ApiResponse({ status: 404, description: 'API key not found.' })
+  @ApiBearerAuth()
+  async updatePermissions(
+    @Param('id') id: string,
+    @Body()
+    permissions: Array<{
+      resource: string;
+      actions: string[];
+    }>,
+    @Request() req: RequestWithUser,
+  ) {
+    const apiKey = await this.apiKeysService.updateResourcePermissions(
+      id,
+      permissions,
+      req.user.organization.toString(),
+      req.user._id?.toString() || '',
+    );
+
+    return {
+      success: true,
+      data: apiKey,
     };
   }
 }
