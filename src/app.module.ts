@@ -12,6 +12,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { CustomersModule } from './customers/customers.module';
 import { DealsModule } from './deals/deals.module';
 import { TasksModule } from './tasks/tasks.module';
+import { ProductsModule } from './products/products.module';
 import { CustomFieldsModule } from './custom-fields/custom-fields.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { AnalyticsModule } from './analytics/analytics.module';
@@ -55,6 +56,7 @@ import configuration from './config/configuration';
     ExportModule,
     ImportModule,
     WebhookModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [

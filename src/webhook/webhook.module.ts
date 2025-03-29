@@ -4,6 +4,8 @@ import { HttpModule } from '@nestjs/axios';
 import { WebhookService } from './webhook.service';
 import { WebhookController } from './webhook.controller';
 import { Webhook, WebhookSchema } from './schemas/webhook.schema';
+import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -12,6 +14,8 @@ import { Webhook, WebhookSchema } from './schemas/webhook.schema';
       timeout: 10000,
       maxRedirects: 5,
     }),
+    AuthModule,
+    UsersModule
   ],
   controllers: [WebhookController],
   providers: [WebhookService],
