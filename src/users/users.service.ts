@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { User, UserDocument } from './entities/user.entity';
@@ -26,7 +26,7 @@ export class UsersService {
     return newUser.save();
   }
 
-  async findAll(organizationId: string): Promise<User[]> {
+  async findAll(organizationId: Types.ObjectId): Promise<User[]> {
     return this.userModel.find({ organization: organizationId }).lean().exec();
   }
 

@@ -56,7 +56,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Returns all users.' })
   async findAll(@Request() req: RequestWithUser) {
     const users = await this.usersService.findAll(
-      String(req.user.organization),
+      req.user.organization,
     );
 
     return {
