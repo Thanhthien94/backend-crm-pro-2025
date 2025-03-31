@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import * as mongoose from 'mongoose';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
@@ -37,9 +38,33 @@ import { AccessControlGuard } from './access-control/guards/access-control.guard
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>('database.uri'),
-      }),
+      useFactory: (configService: ConfigService) => {
+        const isDevMode =
+          configService.get<string>('app.env') === 'development';
+        const isMongoDebug =
+          configService.get<string>('mongoose.debug') === 'true';
+
+        // Bật debug cho mongoose trong môi trường development
+        if (isDevMode) {
+          mongoose.set('debug', isMongoDebug);
+        }
+
+        return {
+          uri: configService.get<string>('database.uri'),
+          connectionFactory: (connection) => {
+            connection.on('connected', () => {
+              console.log('MongoDB connection established successfully');
+            });
+            connection.on('disconnected', () => {
+              console.log('MongoDB connection disconnected');
+            });
+            connection.on('error', (error) => {
+              console.error('MongoDB connection error:', error);
+            });
+            return connection;
+          },
+        };
+      },
       inject: [ConfigService],
     }),
     ThrottlerModule.forRoot([

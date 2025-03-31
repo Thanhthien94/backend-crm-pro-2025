@@ -25,11 +25,11 @@ export class CreateTaskDto {
   description?: string;
 
   @ApiProperty({
-    enum: ['todo', 'in_progress', 'completed', 'cancelled'],
+    enum: ['todo', 'in_progress', 'completed', 'canceled'],
     default: 'todo',
   })
   @IsOptional()
-  @IsEnum(['todo', 'in_progress', 'completed', 'cancelled'])
+  @IsEnum(['todo', 'in_progress', 'completed', 'canceled'])
   status?: string = 'todo';
 
   @ApiProperty({

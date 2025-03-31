@@ -48,15 +48,15 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         throw new UnauthorizedException('Authentication service error');
       }
       // Verify the token
-      console.log('secret: ', this.configService.get('jwt.secret'));
-      console.log('token: ', token);
+      // console.log('secret: ', this.configService.get('jwt.secret'));
+      // console.log('token: ', token);
       const payload = this.jwtService.verify<{ id: string }>(token, {
         secret: this.configService.get('jwt.secret'),
       });
 
       // Get user from database
       const user = await this.usersService.findById(payload.id);
-      console.log('user: ', user);
+      // console.log('user: ', user);
 
       // Attach user to request
       request.user = user;

@@ -84,4 +84,13 @@ export class CreateDealDto {
   @Min(0)
   @Max(100)
   probability?: number;
+
+  // status?: string = 'active';
+  @ApiProperty({
+    enum: ['active', 'inactive'],
+    default: 'active',
+  })
+  @IsOptional()
+  @IsEnum(['active', 'inactive'])
+  status?: string = 'active';
 }

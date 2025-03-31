@@ -16,10 +16,12 @@ import {
   ApiResponse,
   ApiQuery,
   ApiBearerAuth,
+  ApiParam,
 } from '@nestjs/swagger';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { AddCommentDto } from './dto/add-comment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { ParseDatePipe } from '../common/pipes/parse-date.pipe';
@@ -174,6 +176,26 @@ export class TasksController {
     };
   }
 
+  @Get('activities/recent')
+  @ApiOperation({ summary: 'Get recent task activities' })
+  @ApiResponse({ status: 200, description: 'Returns recent task activities.' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiBearerAuth()
+  async getRecentActivities(
+    @Request() req: RequestWithUser,
+    @Query('limit') limit = 10,
+  ) {
+    const activities = await this.tasksService.getRecentActivities(
+      req.user.organization.toString(),
+      +limit,
+    );
+
+    return {
+      success: true,
+      data: activities,
+    };
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a single task' })
   @ApiResponse({ status: 200, description: 'Returns task details.' })
@@ -201,10 +223,12 @@ export class TasksController {
     @Body() updateTaskDto: UpdateTaskDto,
     @Request() req: RequestWithUser,
   ) {
+    console.log('dto: ', updateTaskDto);
     const task = await this.tasksService.update(
       id,
       updateTaskDto,
       req.user.organization.toString(),
+      req.user._id?.toString(),
     );
 
     return {
@@ -219,11 +243,66 @@ export class TasksController {
   @ApiResponse({ status: 404, description: 'Task not found.' })
   @ApiBearerAuth()
   async remove(@Param('id') id: string, @Request() req: RequestWithUser) {
-    await this.tasksService.remove(id, req.user.organization.toString());
+    await this.tasksService.remove(
+      id,
+      req.user.organization.toString(),
+      req.user._id?.toString(),
+    );
 
     return {
       success: true,
       data: {},
+    };
+  }
+
+  @Post(':id/comments')
+  @ApiOperation({ summary: 'Add a comment to a task' })
+  @ApiResponse({ status: 201, description: 'Comment added successfully.' })
+  @ApiResponse({ status: 404, description: 'Task not found.' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
+  @ApiBearerAuth()
+  async addComment(
+    @Param('id') id: string,
+    @Body() addCommentDto: AddCommentDto,
+    @Request() req: RequestWithUser,
+  ) {
+    await this.tasksService.addComment(
+      id,
+      addCommentDto.comment,
+      req.user.organization.toString(),
+      req.user._id?.toString() || '',
+    );
+
+    return {
+      success: true,
+      message: 'Comment added successfully',
+    };
+  }
+
+  @Get(':id/activities')
+  @ApiOperation({ summary: 'Get task activities' })
+  @ApiResponse({ status: 200, description: 'Returns task activities.' })
+  @ApiResponse({ status: 404, description: 'Task not found.' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiBearerAuth()
+  async getTaskActivities(
+    @Param('id') id: string,
+    @Query('limit') limit = 20,
+    @Request() req: RequestWithUser,
+  ) {
+    // Kiểm tra task tồn tại
+    await this.tasksService.findById(id, req.user.organization.toString());
+
+    const activities = await this.tasksService.getTaskActivities(
+      id,
+      req.user.organization.toString(),
+      +limit,
+    );
+
+    return {
+      success: true,
+      data: activities,
     };
   }
 }

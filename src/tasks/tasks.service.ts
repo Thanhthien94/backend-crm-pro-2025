@@ -7,12 +7,15 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { WebhookService } from '../webhook/webhook.service';
 import { WebhookEvent } from '../webhook/enums/webhook-event.enum';
+import { TaskActivityService } from './services/task-activity.service';
+import { ActivityType } from './schemas/task-activity.schema';
 
 @Injectable()
 export class TasksService {
   constructor(
     @InjectModel(Task.name) private taskModel: Model<TaskDocument>,
     private webhookService: WebhookService,
+    private taskActivityService: TaskActivityService,
   ) {}
 
   async findAll(
@@ -129,6 +132,21 @@ export class TasksService {
 
     const savedTask = await task.save();
 
+    // Ghi lại hoạt động tạo task
+    await this.taskActivityService.logActivity({
+      taskId: savedTask._id.toString(),
+      activityType: ActivityType.CREATED,
+      performedBy: userId,
+      organizationId,
+      details: {
+        title: savedTask.title,
+        dueDate: savedTask.dueDate,
+        priority: savedTask.priority,
+        status: savedTask.status,
+        assignedTo: savedTask.assignedTo.toString(),
+      },
+    });
+
     // Trigger webhook
     try {
       // Convert to plain object
@@ -162,9 +180,13 @@ export class TasksService {
     id: string,
     updateTaskDto: UpdateTaskDto,
     organizationId: string,
+    userId?: string,
   ): Promise<TaskDocument> {
     const oldTask = await this.findById(id, organizationId);
     const oldStatus = oldTask.status;
+    const oldPriority = oldTask.priority;
+    const oldAssignee = oldTask.assignedTo ? oldTask.assignedTo.toString() : '';
+    const oldDueDate = oldTask.dueDate;
 
     // Check if we're completing the task
     if (updateTaskDto.status === 'completed' && oldStatus !== 'completed') {
@@ -184,6 +206,68 @@ export class TasksService {
 
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
+    }
+
+    // Nếu có userId, ghi lại các hoạt động thay đổi
+    if (userId) {
+      // Các thay đổi
+      const changes: Record<string, any> = {};
+      let activityType = ActivityType.UPDATED;
+
+      // Kiểm tra từng loại thay đổi cụ thể
+      if (updateTaskDto.status && oldStatus !== updateTaskDto.status) {
+        changes.status = { from: oldStatus, to: updateTaskDto.status };
+        activityType = ActivityType.STATUS_CHANGED;
+
+        // Nếu task hoàn thành, đổi thành COMPLETED
+        if (updateTaskDto.status === 'completed') {
+          activityType = ActivityType.COMPLETED;
+        }
+      }
+
+      if (updateTaskDto.priority && oldPriority !== updateTaskDto.priority) {
+        changes.priority = { from: oldPriority, to: updateTaskDto.priority };
+        if (activityType === ActivityType.UPDATED) {
+          activityType = ActivityType.PRIORITY_CHANGED;
+        }
+      }
+
+      if (
+        updateTaskDto.assignedTo &&
+        oldAssignee !== updateTaskDto.assignedTo
+      ) {
+        changes.assignedTo = {
+          from: oldAssignee,
+          to: updateTaskDto.assignedTo,
+        };
+        if (activityType === ActivityType.UPDATED) {
+          activityType = ActivityType.ASSIGNED;
+        }
+      }
+
+      if (
+        updateTaskDto.dueDate &&
+        oldDueDate.getTime() !== new Date(updateTaskDto.dueDate).getTime()
+      ) {
+        changes.dueDate = {
+          from: oldDueDate,
+          to: updateTaskDto.dueDate,
+        };
+        if (activityType === ActivityType.UPDATED) {
+          activityType = ActivityType.DUE_DATE_CHANGED;
+        }
+      }
+
+      // Ghi lại hoạt động nếu có thay đổi
+      if (Object.keys(changes).length > 0) {
+        await this.taskActivityService.logActivity({
+          taskId: task._id.toString(),
+          activityType,
+          performedBy: userId,
+          organizationId,
+          details: changes,
+        });
+      }
     }
 
     // Trigger webhook for update
@@ -217,7 +301,11 @@ export class TasksService {
     return task;
   }
 
-  async remove(id: string, organizationId: string): Promise<boolean> {
+  async remove(
+    id: string,
+    organizationId: string,
+    userId?: string,
+  ): Promise<boolean> {
     const task = await this.taskModel.findOne({
       _id: id,
       organization: organizationId,
@@ -225,6 +313,20 @@ export class TasksService {
 
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
+    }
+
+    // Ghi lại hoạt động xóa task nếu có userId
+    if (userId) {
+      await this.taskActivityService.logActivity({
+        taskId: task._id.toString(),
+        activityType: ActivityType.DELETED,
+        performedBy: userId,
+        organizationId,
+        details: {
+          title: task.title,
+          status: task.status,
+        },
+      });
     }
 
     await task.deleteOne();
@@ -350,5 +452,47 @@ export class TasksService {
       byStatus,
       byPriority,
     };
+  }
+
+  /**
+   * Thêm bình luận vào task
+   */
+  async addComment(
+    taskId: string,
+    comment: string,
+    organizationId: string,
+    userId: string,
+  ): Promise<TaskDocument> {
+    // Kiểm tra task tồn tại
+    const task = await this.findById(taskId, organizationId);
+
+    // Ghi lại hoạt động thêm bình luận
+    await this.taskActivityService.logActivity({
+      taskId,
+      activityType: ActivityType.COMMENT_ADDED,
+      performedBy: userId,
+      organizationId,
+      comment,
+    });
+
+    return task;
+  }
+
+  /**
+   * Lấy lịch sử hoạt động của task
+   */
+  async getTaskActivities(taskId: string, organizationId: string, limit = 20) {
+    return this.taskActivityService.getTaskActivities(
+      taskId,
+      organizationId,
+      limit,
+    );
+  }
+
+  /**
+   * Lấy hoạt động gần đây trong tổ chức
+   */
+  async getRecentActivities(organizationId: string, limit = 10) {
+    return this.taskActivityService.getRecentActivities(organizationId, limit);
   }
 }
