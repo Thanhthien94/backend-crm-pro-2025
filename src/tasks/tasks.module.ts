@@ -12,6 +12,7 @@ import {
 import { WebhookModule } from '../webhook/webhook.module';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
+import { AccessControlModule } from 'src/access-control/access-control.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UsersModule } from '../users/users.module';
     forwardRef(() => WebhookModule),
     AuthModule,
     UsersModule,
+    forwardRef(() => AccessControlModule),
   ],
   controllers: [TasksController, TaskActivityController],
   providers: [TasksService, TaskActivityService],

@@ -60,7 +60,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // Swagger
-  if (configService.get<string>('nodeEnv') === 'development') {
+  if (configService.get<string>('app.env') === 'development') {
     const config = new DocumentBuilder()
       .setTitle('CRM API Documentation')
       .setDescription('Documentation for the CRM API')

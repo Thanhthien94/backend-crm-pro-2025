@@ -1,4 +1,3 @@
-// src/tasks/tasks.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -7,15 +6,13 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { WebhookService } from '../webhook/webhook.service';
 import { WebhookEvent } from '../webhook/enums/webhook-event.enum';
-import { TaskActivityService } from './services/task-activity.service';
-import { ActivityType } from './schemas/task-activity.schema';
+import { RelatedEntityType } from '../common/enums/related-entity-type.enum';
 
 @Injectable()
 export class TasksService {
   constructor(
     @InjectModel(Task.name) private taskModel: Model<TaskDocument>,
     private webhookService: WebhookService,
-    private taskActivityService: TaskActivityService,
   ) {}
 
   async findAll(
@@ -26,6 +23,8 @@ export class TasksService {
       assignedTo?: string;
       customerId?: string;
       dealId?: string;
+      relatedTo?: string;
+      relatedType?: string;
       search?: string;
       dueBefore?: Date;
       dueAfter?: Date;
@@ -44,6 +43,8 @@ export class TasksService {
       assignedTo?: string;
       customer?: string;
       deal?: string;
+      relatedTo?: string;
+      relatedType?: string;
       dueDate?: { $lt?: Date; $gt?: Date };
       $or?: Array<{ [key: string]: { $regex: string; $options: string } }>;
     };
@@ -55,6 +56,8 @@ export class TasksService {
     if (filters.assignedTo) query.assignedTo = filters.assignedTo;
     if (filters.customerId) query.customer = filters.customerId;
     if (filters.dealId) query.deal = filters.dealId;
+    if (filters.relatedTo) query.relatedTo = filters.relatedTo;
+    if (filters.relatedType) query.relatedType = filters.relatedType;
 
     // Xử lý bộ lọc theo ngày, kiểm tra giá trị hợp lệ
     if (filters.dueBefore instanceof Date || filters.dueAfter instanceof Date) {
@@ -93,6 +96,7 @@ export class TasksService {
       .populate('createdBy', 'name email')
       .populate('customer', 'name email company')
       .populate('deal', 'name value stage')
+      .populate('relatedTo')
       .skip(startIndex)
       .limit(limit)
       .sort({ dueDate: 1 }); // Sắp xếp theo dueDate tăng dần
@@ -109,7 +113,8 @@ export class TasksService {
       .populate('assignedTo', 'name email')
       .populate('createdBy', 'name email')
       .populate('customer', 'name email company')
-      .populate('deal', 'name value stage');
+      .populate('deal', 'name value stage')
+      .populate('relatedTo');
 
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
@@ -123,6 +128,16 @@ export class TasksService {
     organizationId: string,
     userId: string,
   ): Promise<TaskDocument> {
+    // Kiểm tra xem cả relatedTo và relatedType có được cung cấp hay không
+    if (
+      (createTaskDto.relatedTo && !createTaskDto.relatedType) ||
+      (!createTaskDto.relatedTo && createTaskDto.relatedType)
+    ) {
+      throw new Error(
+        'Cả relatedTo và relatedType phải được cung cấp cùng nhau',
+      );
+    }
+
     const task = new this.taskModel({
       ...createTaskDto,
       organization: organizationId,
@@ -131,21 +146,6 @@ export class TasksService {
     });
 
     const savedTask = await task.save();
-
-    // Ghi lại hoạt động tạo task
-    await this.taskActivityService.logActivity({
-      taskId: savedTask._id.toString(),
-      activityType: ActivityType.CREATED,
-      performedBy: userId,
-      organizationId,
-      details: {
-        title: savedTask.title,
-        dueDate: savedTask.dueDate,
-        priority: savedTask.priority,
-        status: savedTask.status,
-        assignedTo: savedTask.assignedTo.toString(),
-      },
-    });
 
     // Trigger webhook
     try {
@@ -157,6 +157,10 @@ export class TasksService {
         priority: savedTask.priority,
         dueDate: savedTask.dueDate,
         assignedTo: savedTask.assignedTo ? savedTask.assignedTo.toString() : '',
+        customer: savedTask.customer ? savedTask.customer.toString() : null,
+        deal: savedTask.deal ? savedTask.deal.toString() : null,
+        relatedTo: savedTask.relatedTo ? savedTask.relatedTo.toString() : null,
+        relatedType: savedTask.relatedType || null,
         organization: organizationId,
       };
 
@@ -180,13 +184,19 @@ export class TasksService {
     id: string,
     updateTaskDto: UpdateTaskDto,
     organizationId: string,
-    userId?: string,
   ): Promise<TaskDocument> {
     const oldTask = await this.findById(id, organizationId);
     const oldStatus = oldTask.status;
-    const oldPriority = oldTask.priority;
-    const oldAssignee = oldTask.assignedTo ? oldTask.assignedTo.toString() : '';
-    const oldDueDate = oldTask.dueDate;
+
+    // Kiểm tra xem cả relatedTo và relatedType có được cung cấp hay không
+    if (
+      (updateTaskDto.relatedTo && !updateTaskDto.relatedType) ||
+      (!updateTaskDto.relatedTo && updateTaskDto.relatedType)
+    ) {
+      throw new Error(
+        'Cả relatedTo và relatedType phải được cung cấp cùng nhau',
+      );
+    }
 
     // Check if we're completing the task
     if (updateTaskDto.status === 'completed' && oldStatus !== 'completed') {
@@ -202,72 +212,11 @@ export class TasksService {
       .populate('assignedTo', 'name email')
       .populate('createdBy', 'name email')
       .populate('customer', 'name email company')
-      .populate('deal', 'name value stage');
+      .populate('deal', 'name value stage')
+      .populate('relatedTo');
 
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
-    }
-
-    // Nếu có userId, ghi lại các hoạt động thay đổi
-    if (userId) {
-      // Các thay đổi
-      const changes: Record<string, any> = {};
-      let activityType = ActivityType.UPDATED;
-
-      // Kiểm tra từng loại thay đổi cụ thể
-      if (updateTaskDto.status && oldStatus !== updateTaskDto.status) {
-        changes.status = { from: oldStatus, to: updateTaskDto.status };
-        activityType = ActivityType.STATUS_CHANGED;
-
-        // Nếu task hoàn thành, đổi thành COMPLETED
-        if (updateTaskDto.status === 'completed') {
-          activityType = ActivityType.COMPLETED;
-        }
-      }
-
-      if (updateTaskDto.priority && oldPriority !== updateTaskDto.priority) {
-        changes.priority = { from: oldPriority, to: updateTaskDto.priority };
-        if (activityType === ActivityType.UPDATED) {
-          activityType = ActivityType.PRIORITY_CHANGED;
-        }
-      }
-
-      if (
-        updateTaskDto.assignedTo &&
-        oldAssignee !== updateTaskDto.assignedTo
-      ) {
-        changes.assignedTo = {
-          from: oldAssignee,
-          to: updateTaskDto.assignedTo,
-        };
-        if (activityType === ActivityType.UPDATED) {
-          activityType = ActivityType.ASSIGNED;
-        }
-      }
-
-      if (
-        updateTaskDto.dueDate &&
-        oldDueDate.getTime() !== new Date(updateTaskDto.dueDate).getTime()
-      ) {
-        changes.dueDate = {
-          from: oldDueDate,
-          to: updateTaskDto.dueDate,
-        };
-        if (activityType === ActivityType.UPDATED) {
-          activityType = ActivityType.DUE_DATE_CHANGED;
-        }
-      }
-
-      // Ghi lại hoạt động nếu có thay đổi
-      if (Object.keys(changes).length > 0) {
-        await this.taskActivityService.logActivity({
-          taskId: task._id.toString(),
-          activityType,
-          performedBy: userId,
-          organizationId,
-          details: changes,
-        });
-      }
     }
 
     // Trigger webhook for update
@@ -280,6 +229,10 @@ export class TasksService {
         priority: task.priority,
         dueDate: task.dueDate,
         assignedTo: task.assignedTo ? task.assignedTo.toString() : '',
+        customer: task.customer ? task.customer.toString() : null,
+        deal: task.deal ? task.deal.toString() : null,
+        relatedTo: task.relatedTo ? task.relatedTo.toString() : null,
+        relatedType: task.relatedType || null,
         organization: organizationId,
       };
 
@@ -301,11 +254,7 @@ export class TasksService {
     return task;
   }
 
-  async remove(
-    id: string,
-    organizationId: string,
-    userId?: string,
-  ): Promise<boolean> {
+  async remove(id: string, organizationId: string): Promise<boolean> {
     const task = await this.taskModel.findOne({
       _id: id,
       organization: organizationId,
@@ -313,20 +262,6 @@ export class TasksService {
 
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
-    }
-
-    // Ghi lại hoạt động xóa task nếu có userId
-    if (userId) {
-      await this.taskActivityService.logActivity({
-        taskId: task._id.toString(),
-        activityType: ActivityType.DELETED,
-        performedBy: userId,
-        organizationId,
-        details: {
-          title: task.title,
-          status: task.status,
-        },
-      });
     }
 
     await task.deleteOne();
@@ -366,6 +301,7 @@ export class TasksService {
       })
       .populate('customer', 'name email company')
       .populate('deal', 'name value stage')
+      .populate('relatedTo')
       .sort({ dueDate: 1 })
       .limit(10);
   }
@@ -385,8 +321,83 @@ export class TasksService {
       })
       .populate('customer', 'name email company')
       .populate('deal', 'name value stage')
+      .populate('relatedTo')
       .sort({ dueDate: 1 })
       .limit(10);
+  }
+
+  /**
+   * Tìm task theo đối tượng liên kết
+   */
+  async findByRelation(
+    organizationId: string,
+    relatedType: RelatedEntityType,
+    relatedId: string,
+  ): Promise<TaskDocument[]> {
+    // Xử lý các trường hợp đặc biệt (customer, deal) và trường hợp đa hình (relatedTo)
+    let query: any = { organization: organizationId };
+
+    // Kiểm tra loại đối tượng và thiết lập query phù hợp
+    if (relatedType === RelatedEntityType.CUSTOMER) {
+      query.customer = relatedId;
+    } else if (relatedType === RelatedEntityType.DEAL) {
+      query.deal = relatedId;
+    } else {
+      query.relatedTo = relatedId;
+      query.relatedType = relatedType;
+    }
+
+    return this.taskModel
+      .find(query)
+      .populate('assignedTo', 'name email')
+      .populate('createdBy', 'name email')
+      .populate('customer', 'name email company')
+      .populate('deal', 'name value stage')
+      .populate('relatedTo')
+      .sort({ dueDate: 1 })
+      .exec();
+  }
+
+  /**
+   * Xóa nhiều task cùng lúc
+   */
+  async bulkDelete(
+    ids: string[],
+    organizationId: string,
+  ): Promise<{ deletedCount: number }> {
+    // Xác thực các ID thuộc về tổ chức
+    const tasks = await this.taskModel.find({
+      _id: { $in: ids },
+      organization: organizationId,
+    });
+
+    if (tasks.length !== ids.length) {
+      throw new Error('Một số task không tồn tại hoặc không thuộc tổ chức này');
+    }
+
+    // Xóa tasks
+    const result = await this.taskModel.deleteMany({
+      _id: { $in: ids },
+      organization: organizationId,
+    });
+
+    // Trigger webhooks cho từng task đã xóa
+    for (const task of tasks) {
+      try {
+        await this.webhookService.triggerWebhook(
+          WebhookEvent.TASK_DELETED,
+          organizationId,
+          { id: task._id.toString() },
+        );
+      } catch (error) {
+        console.error(
+          `Failed to trigger webhook for task ${task._id}:`,
+          error instanceof Error ? error.message : 'Unknown error',
+        );
+      }
+    }
+
+    return { deletedCount: result.deletedCount };
   }
 
   async getTasksSummary(
@@ -398,6 +409,7 @@ export class TasksService {
     overdue: number;
     byStatus: Record<string, number>;
     byPriority: Record<string, number>;
+    byRelatedType: Record<string, number>;
   }> {
     // Base query for the organization
     const baseQuery = { organization: organizationId };
@@ -445,54 +457,24 @@ export class TasksService {
       return acc;
     }, {});
 
+    // Get counts by relatedType
+    const relatedTypeAggregation = await this.taskModel.aggregate([
+      { $match: { ...baseQuery, relatedType: { $exists: true, $ne: null } } },
+      { $group: { _id: '$relatedType', count: { $sum: 1 } } },
+    ]);
+
+    const byRelatedType = relatedTypeAggregation.reduce((acc, curr) => {
+      acc[curr._id] = curr.count;
+      return acc;
+    }, {});
+
     return {
       total,
       completed,
       overdue,
       byStatus,
       byPriority,
+      byRelatedType,
     };
-  }
-
-  /**
-   * Thêm bình luận vào task
-   */
-  async addComment(
-    taskId: string,
-    comment: string,
-    organizationId: string,
-    userId: string,
-  ): Promise<TaskDocument> {
-    // Kiểm tra task tồn tại
-    const task = await this.findById(taskId, organizationId);
-
-    // Ghi lại hoạt động thêm bình luận
-    await this.taskActivityService.logActivity({
-      taskId,
-      activityType: ActivityType.COMMENT_ADDED,
-      performedBy: userId,
-      organizationId,
-      comment,
-    });
-
-    return task;
-  }
-
-  /**
-   * Lấy lịch sử hoạt động của task
-   */
-  async getTaskActivities(taskId: string, organizationId: string, limit = 20) {
-    return this.taskActivityService.getTaskActivities(
-      taskId,
-      organizationId,
-      limit,
-    );
-  }
-
-  /**
-   * Lấy hoạt động gần đây trong tổ chức
-   */
-  async getRecentActivities(organizationId: string, limit = 10) {
-    return this.taskActivityService.getRecentActivities(organizationId, limit);
   }
 }

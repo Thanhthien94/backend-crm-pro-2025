@@ -6,12 +6,18 @@ import { CreateDealDto } from './dto/create-deal.dto';
 import { UpdateDealDto } from './dto/update-deal.dto';
 import { WebhookService } from '../webhook/webhook.service';
 import { WebhookEvent } from '../webhook/enums/webhook-event.enum';
+import { TasksService } from '../tasks/tasks.service';
+import { RelatedEntityType } from '../common/enums/related-entity-type.enum';
 
+interface DealWithRelatedTasks extends DealDocument {
+  relatedTasks?: any[];
+}
 @Injectable()
 export class DealsService {
   constructor(
     @InjectModel(Deal.name) private dealModel: Model<DealDocument>,
     private webhookService: WebhookService,
+    private tasksService: TasksService,
   ) {}
 
   async findAll(
@@ -25,7 +31,7 @@ export class DealsService {
     page = 1,
     limit = 10,
   ): Promise<{
-    deals: DealDocument[];
+    deals: DealDocument[]; // Updated type to DealDocument[]
     total: number;
   }> {
     type QueryType = {
@@ -61,6 +67,25 @@ export class DealsService {
       .limit(limit)
       .sort({ createdAt: -1 });
 
+    // Lấy tasks liên quan cho từng deal
+    for (const deal of deals) {
+      try {
+        const relatedTasks = await this.tasksService.findByRelation(
+          organizationId,
+          RelatedEntityType.DEAL,
+          deal._id.toString(),
+        );
+        // Thêm trường relatedTasks vào deal object
+        (deal as DealWithRelatedTasks).relatedTasks = relatedTasks;
+      } catch (error) {
+        console.error(
+          `Error fetching related tasks for deal ${deal._id}:`,
+          error,
+        );
+        (deal as DealWithRelatedTasks).relatedTasks = [];
+      }
+    }
+
     return { deals, total };
   }
 
@@ -71,10 +96,26 @@ export class DealsService {
         organization: organizationId,
       })
       .populate('assignedTo', 'name email')
-      .populate('customer', 'name email company');
+      .populate('customer', 'name email company')
+      .lean();
 
     if (!deal) {
       throw new NotFoundException(`Deal with ID ${id} not found`);
+    }
+
+    try {
+      // Lấy tasks liên quan
+      const relatedTasks = await this.tasksService.findByRelation(
+        organizationId,
+        RelatedEntityType.DEAL,
+        id,
+      );
+      console.log('task related: ', relatedTasks);
+      // Thêm trường relatedTasks vào deal object
+      (deal as DealWithRelatedTasks).relatedTasks = relatedTasks;
+    } catch (error) {
+      console.error(`Error fetching related tasks for deal ${id}:`, error);
+      (deal as DealWithRelatedTasks).relatedTasks = [];
     }
 
     return deal;

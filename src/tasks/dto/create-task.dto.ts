@@ -6,9 +6,11 @@ import {
   IsDate,
   IsBoolean,
   IsMongoId,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { RelatedEntityType } from '../../common/enums/related-entity-type.enum';
 
 export class CreateTaskDto {
   @ApiProperty({ example: 'Follow up with client' })
@@ -25,11 +27,11 @@ export class CreateTaskDto {
   description?: string;
 
   @ApiProperty({
-    enum: ['todo', 'in_progress', 'completed', 'canceled'],
+    enum: ['todo', 'in_progress', 'completed', 'cancelled'],
     default: 'todo',
   })
   @IsOptional()
-  @IsEnum(['todo', 'in_progress', 'completed', 'canceled'])
+  @IsEnum(['todo', 'in_progress', 'completed', 'cancelled'])
   status?: string = 'todo';
 
   @ApiProperty({
@@ -60,6 +62,27 @@ export class CreateTaskDto {
   @IsOptional()
   @IsMongoId()
   deal?: string;
+
+  @ApiProperty({
+    example: '60d21b4667d0d8992e610c85',
+    required: false,
+    description:
+      'ID của đối tượng liên quan khác (khi relatedType được cung cấp)',
+  })
+  @IsOptional()
+  @IsMongoId()
+  @ValidateIf((o) => o.relatedType)
+  relatedTo?: string;
+
+  @ApiProperty({
+    enum: RelatedEntityType,
+    required: false,
+    description: 'Loại đối tượng liên quan (khi relatedTo được cung cấp)',
+  })
+  @IsOptional()
+  @IsEnum(RelatedEntityType)
+  @ValidateIf((o) => o.relatedTo)
+  relatedType?: RelatedEntityType;
 
   @ApiProperty({ example: false, required: false })
   @IsOptional()

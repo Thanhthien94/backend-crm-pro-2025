@@ -9,6 +9,8 @@ import {
   Query,
   UseGuards,
   Request,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -21,10 +23,14 @@ import {
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import { AddCommentDto } from './dto/add-comment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { ParseDatePipe } from '../common/pipes/parse-date.pipe';
+import { RelatedEntityType } from '../common/enums/related-entity-type.enum';
+import { AccessControl } from '../access-control/decorators/access-control.decorator';
+import { AccessControlGuard } from '../access-control/guards/access-control.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 
 @ApiTags('tasks')
 @Controller('tasks')
@@ -33,47 +39,121 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new task' })
-  @ApiResponse({ status: 201, description: 'Task created successfully.' })
+  @UseGuards(AccessControlGuard)
+  @AccessControl('task', 'create')
+  @ApiOperation({ summary: 'Tạo task mới' })
+  @ApiResponse({ status: 201, description: 'Task đã được tạo thành công.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Dữ liệu không hợp lệ hoặc thiếu thông tin bắt buộc.',
+  })
   @ApiBearerAuth()
   async create(
     @Body() createTaskDto: CreateTaskDto,
     @Request() req: RequestWithUser,
   ) {
-    const task = await this.tasksService.create(
-      createTaskDto,
-      req.user.organization.toString(),
-      req.user._id?.toString() || '',
-    );
+    try {
+      const task = await this.tasksService.create(
+        createTaskDto,
+        req.user.organization.toString(),
+        req.user._id?.toString() || '',
+      );
 
-    return {
-      success: true,
-      data: task,
-    };
+      return {
+        success: true,
+        data: task,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
+    }
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all tasks' })
-  @ApiResponse({ status: 200, description: 'Returns all tasks.' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @UseGuards(AccessControlGuard)
+  @AccessControl('task', 'read')
+  @ApiOperation({ summary: 'Lấy danh sách task' })
+  @ApiResponse({ status: 200, description: 'Trả về tất cả task.' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Số trang',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Số lượng task mỗi trang',
+  })
   @ApiQuery({
     name: 'status',
     required: false,
     enum: ['todo', 'in_progress', 'completed', 'cancelled'],
+    description: 'Lọc theo trạng thái',
   })
   @ApiQuery({
     name: 'priority',
     required: false,
     enum: ['low', 'medium', 'high'],
+    description: 'Lọc theo mức độ ưu tiên',
   })
-  @ApiQuery({ name: 'assignedTo', required: false, type: String })
-  @ApiQuery({ name: 'customerId', required: false, type: String })
-  @ApiQuery({ name: 'dealId', required: false, type: String })
-  @ApiQuery({ name: 'search', required: false, type: String })
-  @ApiQuery({ name: 'dueBefore', required: false, type: Date })
-  @ApiQuery({ name: 'dueAfter', required: false, type: Date })
-  @ApiQuery({ name: 'isOverdue', required: false, type: Boolean })
+  @ApiQuery({
+    name: 'assignedTo',
+    required: false,
+    type: String,
+    description: 'Lọc theo người được gán',
+  })
+  @ApiQuery({
+    name: 'customerId',
+    required: false,
+    type: String,
+    description: 'Lọc theo khách hàng',
+  })
+  @ApiQuery({
+    name: 'dealId',
+    required: false,
+    type: String,
+    description: 'Lọc theo thương vụ',
+  })
+  @ApiQuery({
+    name: 'relatedTo',
+    required: false,
+    type: String,
+    description: 'ID của đối tượng liên kết',
+  })
+  @ApiQuery({
+    name: 'relatedType',
+    required: false,
+    enum: RelatedEntityType,
+    description: 'Loại đối tượng liên kết',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Tìm kiếm theo tên hoặc mô tả',
+  })
+  @ApiQuery({
+    name: 'dueBefore',
+    required: false,
+    type: Date,
+    description: 'Hạn chót trước ngày',
+  })
+  @ApiQuery({
+    name: 'dueAfter',
+    required: false,
+    type: Date,
+    description: 'Hạn chót sau ngày',
+  })
+  @ApiQuery({
+    name: 'isOverdue',
+    required: false,
+    type: Boolean,
+    description: 'Đã quá hạn',
+  })
   @ApiBearerAuth()
   async findAll(
     @Request() req: RequestWithUser,
@@ -84,12 +164,21 @@ export class TasksController {
     @Query('assignedTo') assignedTo?: string,
     @Query('customerId') customerId?: string,
     @Query('dealId') dealId?: string,
+    @Query('relatedTo') relatedTo?: string,
+    @Query('relatedType') relatedType?: RelatedEntityType,
     @Query('search') search?: string,
     @Query('dueBefore', new ParseDatePipe()) dueBefore?: Date,
     @Query('dueAfter', new ParseDatePipe()) dueAfter?: Date,
     @Query('isOverdue') isOverdue?: string | boolean,
   ) {
-    // Cải thiện xử lý giá trị isOverdue
+    // Kiểm tra tính hợp lệ của relatedTo và relatedType
+    if ((relatedTo && !relatedType) || (!relatedTo && relatedType)) {
+      throw new BadRequestException(
+        'Cả relatedTo và relatedType phải được cung cấp cùng nhau',
+      );
+    }
+
+    // Chuyển đổi isOverdue sang boolean
     const isOverdueBool =
       isOverdue === true ||
       (typeof isOverdue === 'string' && isOverdue.toLowerCase() === 'true');
@@ -100,6 +189,8 @@ export class TasksController {
       assignedTo,
       customerId,
       dealId,
+      relatedTo,
+      relatedType,
       search,
       dueBefore,
       dueAfter,
@@ -126,8 +217,16 @@ export class TasksController {
   }
 
   @Get('summary')
-  @ApiOperation({ summary: 'Get tasks summary' })
-  @ApiResponse({ status: 200, description: 'Returns tasks summary.' })
+  @UseGuards(AccessControlGuard)
+  @AccessControl('task', 'read')
+  @ApiOperation({ summary: 'Lấy thống kê task' })
+  @ApiResponse({ status: 200, description: 'Trả về thống kê task.' })
+  @ApiQuery({
+    name: 'userId',
+    required: false,
+    type: String,
+    description: 'Lọc theo người dùng cụ thể',
+  })
   @ApiBearerAuth()
   async getSummary(
     @Request() req: RequestWithUser,
@@ -145,8 +244,10 @@ export class TasksController {
   }
 
   @Get('upcoming')
-  @ApiOperation({ summary: "Get current user's upcoming tasks" })
-  @ApiResponse({ status: 200, description: 'Returns upcoming tasks.' })
+  @UseGuards(AccessControlGuard)
+  @AccessControl('task', 'read')
+  @ApiOperation({ summary: 'Lấy task sắp đến hạn của người dùng hiện tại' })
+  @ApiResponse({ status: 200, description: 'Trả về task sắp đến hạn.' })
   @ApiBearerAuth()
   async getUpcoming(@Request() req: RequestWithUser) {
     const tasks = await this.tasksService.getUpcomingTasks(
@@ -161,8 +262,10 @@ export class TasksController {
   }
 
   @Get('overdue')
-  @ApiOperation({ summary: "Get current user's overdue tasks" })
-  @ApiResponse({ status: 200, description: 'Returns overdue tasks.' })
+  @UseGuards(AccessControlGuard)
+  @AccessControl('task', 'read')
+  @ApiOperation({ summary: 'Lấy task quá hạn của người dùng hiện tại' })
+  @ApiResponse({ status: 200, description: 'Trả về task quá hạn.' })
   @ApiBearerAuth()
   async getOverdue(@Request() req: RequestWithUser) {
     const tasks = await this.tasksService.getOverdueTasks(
@@ -176,133 +279,242 @@ export class TasksController {
     };
   }
 
-  @Get('activities/recent')
-  @ApiOperation({ summary: 'Get recent task activities' })
-  @ApiResponse({ status: 200, description: 'Returns recent task activities.' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @Get('by-relation/:relatedType/:relatedId')
+  @UseGuards(AccessControlGuard)
+  @AccessControl('task', 'read')
+  @ApiOperation({ summary: 'Lấy task theo đối tượng liên kết' })
+  @ApiResponse({
+    status: 200,
+    description: 'Trả về task theo đối tượng liên kết.',
+  })
+  @ApiParam({
+    name: 'relatedType',
+    enum: RelatedEntityType,
+    description: 'Loại đối tượng liên kết',
+  })
+  @ApiParam({
+    name: 'relatedId',
+    description: 'ID của đối tượng liên kết',
+  })
   @ApiBearerAuth()
-  async getRecentActivities(
+  async getByRelation(
+    @Param('relatedType') relatedType: RelatedEntityType,
+    @Param('relatedId') relatedId: string,
     @Request() req: RequestWithUser,
-    @Query('limit') limit = 10,
   ) {
-    const activities = await this.tasksService.getRecentActivities(
+    const tasks = await this.tasksService.findByRelation(
       req.user.organization.toString(),
-      +limit,
+      relatedType,
+      relatedId,
     );
 
     return {
       success: true,
-      data: activities,
+      count: tasks.length,
+      data: tasks,
     };
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a single task' })
-  @ApiResponse({ status: 200, description: 'Returns task details.' })
-  @ApiResponse({ status: 404, description: 'Task not found.' })
+  @UseGuards(AccessControlGuard)
+  @AccessControl('task', 'read')
+  @ApiOperation({ summary: 'Lấy thông tin chi tiết task' })
+  @ApiResponse({ status: 200, description: 'Trả về thông tin task.' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy task.' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
   @ApiBearerAuth()
   async findOne(@Param('id') id: string, @Request() req: RequestWithUser) {
-    const task = await this.tasksService.findById(
-      id,
-      req.user.organization.toString(),
-    );
+    try {
+      const task = await this.tasksService.findById(
+        id,
+        req.user.organization.toString(),
+      );
 
-    return {
-      success: true,
-      data: task,
-    };
+      return {
+        success: true,
+        data: task,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Lỗi không xác định',
+      );
+    }
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a task' })
-  @ApiResponse({ status: 200, description: 'Task updated successfully.' })
-  @ApiResponse({ status: 404, description: 'Task not found.' })
+  @UseGuards(AccessControlGuard)
+  @AccessControl('task', 'update')
+  @ApiOperation({ summary: 'Cập nhật task' })
+  @ApiResponse({
+    status: 200,
+    description: 'Task đã được cập nhật thành công.',
+  })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy task.' })
+  @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ.' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
   @ApiBearerAuth()
   async update(
     @Param('id') id: string,
     @Body() updateTaskDto: UpdateTaskDto,
     @Request() req: RequestWithUser,
   ) {
-    console.log('dto: ', updateTaskDto);
-    const task = await this.tasksService.update(
-      id,
-      updateTaskDto,
-      req.user.organization.toString(),
-      req.user._id?.toString(),
-    );
+    try {
+      // Kiểm tra tính hợp lệ của relatedTo và relatedType
+      if (
+        (updateTaskDto.relatedTo && !updateTaskDto.relatedType) ||
+        (!updateTaskDto.relatedTo && updateTaskDto.relatedType)
+      ) {
+        throw new BadRequestException(
+          'Cả relatedTo và relatedType phải được cung cấp cùng nhau',
+        );
+      }
 
-    return {
-      success: true,
-      data: task,
-    };
+      const task = await this.tasksService.update(
+        id,
+        updateTaskDto,
+        req.user.organization.toString(),
+      );
+
+      return {
+        success: true,
+        data: task,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Lỗi không xác định',
+      );
+    }
+  }
+
+  @Patch(':id/complete')
+  @UseGuards(AccessControlGuard)
+  @AccessControl('task', 'update')
+  @ApiOperation({ summary: 'Đánh dấu task hoàn thành' })
+  @ApiResponse({
+    status: 200,
+    description: 'Task đã được đánh dấu hoàn thành.',
+  })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy task.' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
+  @ApiBearerAuth()
+  async completeTask(@Param('id') id: string, @Request() req: RequestWithUser) {
+    try {
+      const task = await this.tasksService.update(
+        id,
+        { status: 'completed', completedAt: new Date() },
+        req.user.organization.toString(),
+      );
+
+      return {
+        success: true,
+        data: task,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Lỗi không xác định',
+      );
+    }
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a task' })
-  @ApiResponse({ status: 200, description: 'Task deleted successfully.' })
-  @ApiResponse({ status: 404, description: 'Task not found.' })
+  @UseGuards(AccessControlGuard)
+  @AccessControl('task', 'delete')
+  @ApiOperation({ summary: 'Xóa task' })
+  @ApiResponse({ status: 200, description: 'Task đã được xóa thành công.' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy task.' })
+  @ApiParam({ name: 'id', description: 'Task ID' })
   @ApiBearerAuth()
   async remove(@Param('id') id: string, @Request() req: RequestWithUser) {
-    await this.tasksService.remove(
-      id,
-      req.user.organization.toString(),
-      req.user._id?.toString(),
-    );
+    try {
+      await this.tasksService.remove(id, req.user.organization.toString());
 
-    return {
-      success: true,
-      data: {},
-    };
+      return {
+        success: true,
+        message: 'Task đã được xóa thành công',
+        data: {},
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Lỗi không xác định',
+      );
+    }
   }
 
-  @Post(':id/comments')
-  @ApiOperation({ summary: 'Add a comment to a task' })
-  @ApiResponse({ status: 201, description: 'Comment added successfully.' })
-  @ApiResponse({ status: 404, description: 'Task not found.' })
-  @ApiParam({ name: 'id', description: 'Task ID' })
+  @Post('bulk')
+  @Roles('admin', 'manager')
+  @UseGuards(RolesGuard, AccessControlGuard)
+  @AccessControl('task', 'create')
+  @ApiOperation({ summary: 'Tạo nhiều task cùng lúc' })
+  @ApiResponse({ status: 201, description: 'Các task đã được tạo thành công.' })
+  @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ.' })
   @ApiBearerAuth()
-  async addComment(
-    @Param('id') id: string,
-    @Body() addCommentDto: AddCommentDto,
+  async createBulk(
+    @Body() createTaskDtos: CreateTaskDto[],
     @Request() req: RequestWithUser,
   ) {
-    await this.tasksService.addComment(
-      id,
-      addCommentDto.comment,
-      req.user.organization.toString(),
-      req.user._id?.toString() || '',
-    );
+    try {
+      const tasks = await Promise.all(
+        createTaskDtos.map((dto) =>
+          this.tasksService.create(
+            dto,
+            req.user.organization.toString(),
+            req.user._id?.toString() || '',
+          ),
+        ),
+      );
 
-    return {
-      success: true,
-      message: 'Comment added successfully',
-    };
+      return {
+        success: true,
+        count: tasks.length,
+        data: tasks,
+      };
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Lỗi không xác định',
+      );
+    }
   }
 
-  @Get(':id/activities')
-  @ApiOperation({ summary: 'Get task activities' })
-  @ApiResponse({ status: 200, description: 'Returns task activities.' })
-  @ApiResponse({ status: 404, description: 'Task not found.' })
-  @ApiParam({ name: 'id', description: 'Task ID' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @Delete('bulk')
+  @Roles('admin')
+  @UseGuards(RolesGuard, AccessControlGuard)
+  @AccessControl('task', 'delete')
+  @ApiOperation({ summary: 'Xóa nhiều task cùng lúc' })
+  @ApiResponse({ status: 200, description: 'Các task đã được xóa thành công.' })
+  @ApiResponse({ status: 400, description: 'Dữ liệu không hợp lệ.' })
   @ApiBearerAuth()
-  async getTaskActivities(
-    @Param('id') id: string,
-    @Query('limit') limit = 20,
+  async removeBulk(
+    @Body('ids') ids: string[],
     @Request() req: RequestWithUser,
   ) {
-    // Kiểm tra task tồn tại
-    await this.tasksService.findById(id, req.user.organization.toString());
+    try {
+      const result = await this.tasksService.bulkDelete(
+        ids,
+        req.user.organization.toString(),
+      );
 
-    const activities = await this.tasksService.getTaskActivities(
-      id,
-      req.user.organization.toString(),
-      +limit,
-    );
-
-    return {
-      success: true,
-      data: activities,
-    };
+      return {
+        success: true,
+        data: {
+          deletedCount: result.deletedCount,
+        },
+      };
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Lỗi không xác định',
+      );
+    }
   }
 }

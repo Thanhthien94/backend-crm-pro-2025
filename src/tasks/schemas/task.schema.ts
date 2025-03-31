@@ -4,6 +4,7 @@ import { User } from '../../users/schemas/user.schema';
 import { Organization } from '../../organizations/schemas/organization.schema';
 import { Customer } from '../../customers/schemas/customer.schema';
 import { Deal } from '../../deals/schemas/deal.schema';
+import { RelatedEntityType } from '../../common/enums/related-entity-type.enum';
 
 @Schema({ timestamps: true })
 export class Task {
@@ -25,7 +26,7 @@ export class Task {
   @Prop({
     required: true,
     type: String,
-    enum: ['todo', 'in_progress', 'completed', 'canceled'],
+    enum: ['todo', 'in_progress', 'completed', 'cancelled'],
     default: 'todo',
   })
   status!: string;
@@ -65,6 +66,7 @@ export class Task {
   })
   organization!: Organization;
 
+  // Giữ các trường liên kết cụ thể cho các đối tượng chính
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: 'Customer',
@@ -76,6 +78,19 @@ export class Task {
     ref: 'Deal',
   })
   deal?: Deal;
+
+  // Thêm trường đa hình cho các đối tượng phụ hoặc tương lai
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    refPath: 'relatedType',
+  })
+  relatedTo?: any;
+
+  @Prop({
+    type: String,
+    enum: Object.values(RelatedEntityType),
+  })
+  relatedType?: RelatedEntityType;
 
   @Prop({
     type: Date,
@@ -103,3 +118,5 @@ export const TaskSchema = SchemaFactory.createForClass(Task);
 TaskSchema.index({ organization: 1, status: 1 });
 TaskSchema.index({ organization: 1, assignedTo: 1 });
 TaskSchema.index({ organization: 1, dueDate: 1 });
+// Thêm index cho các trường liên kết mới
+TaskSchema.index({ relatedTo: 1, relatedType: 1 });
