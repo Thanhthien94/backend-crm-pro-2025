@@ -1,10 +1,18 @@
-import { Controller, Get, UseGuards, Request, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  UseGuards,
+  Request,
+  Query,
+  Param,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiQuery,
   ApiBearerAuth,
+  ApiParam,
 } from '@nestjs/swagger';
 import { TaskActivityService } from '../services/task-activity.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -12,6 +20,8 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RequestWithUser } from '../../common/interfaces/request-with-user.interface';
 import { ParseDatePipe } from '../../common/pipes/parse-date.pipe';
+import { AccessControlGuard } from 'src/access-control/guards/access-control.guard';
+import { AccessControl } from 'src/access-control/decorators/access-control.decorator';
 
 @ApiTags('task-activities')
 @Controller('task-activities')
@@ -110,6 +120,43 @@ export class TaskActivityController {
     return {
       success: true,
       data: stats,
+    };
+  }
+
+  @Get('task/:taskId')
+  @UseGuards(AccessControlGuard)
+  @AccessControl('task', 'read')
+  @ApiOperation({ summary: 'Lấy lịch sử hoạt động của task' })
+  @ApiResponse({
+    status: 200,
+    description: 'Trả về lịch sử hoạt động của task.',
+  })
+  @ApiParam({
+    name: 'taskId',
+    description: 'ID của task cần lấy lịch sử hoạt động',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Số lượng bản ghi tối đa',
+  })
+  @ApiBearerAuth()
+  async getTaskActivities(
+    @Param('taskId') taskId: string,
+    @Request() req: RequestWithUser,
+    @Query('limit') limit = 20,
+  ) {
+    const activities = await this.taskActivityService.getTaskActivities(
+      taskId,
+      req.user.organization.toString(),
+      +limit,
+    );
+
+    return {
+      success: true,
+      count: activities.length,
+      data: activities,
     };
   }
 }

@@ -12,11 +12,19 @@ import { WebhookService } from '../webhook/webhook.service';
 import { WebhookEvent } from '../webhook/enums/webhook-event.enum';
 import { CustomFieldsService } from '../custom-fields/custom-fields.service';
 import { EntityType } from '../custom-fields/schemas/custom-field.schema';
+import { Deal, DealDocument } from '../deals/schemas/deal.schema';
+import { Task, TaskDocument } from '../tasks/schemas/task.schema';
 
+interface CustomerWithRelatedData extends CustomerDocument {
+  relatedDeals?: DealDocument[];
+  relatedTasks?: TaskDocument[];
+}
 @Injectable()
 export class CustomersService {
   constructor(
     @InjectModel(Customer.name) private customerModel: Model<CustomerDocument>,
+    @InjectModel(Deal.name) private dealModel: Model<DealDocument>,
+    @InjectModel(Task.name) private taskModel: Model<TaskDocument>,
     private webhookService: WebhookService,
     private customFieldsService: CustomFieldsService,
   ) {}
@@ -71,6 +79,43 @@ export class CustomersService {
     return { customers, total };
   }
 
+  /**
+   * Lấy danh sách deals liên quan đến một customer
+   */
+  async getRelatedDeals(
+    customerId: string,
+    organizationId: string,
+  ): Promise<DealDocument[]> {
+    return await this.dealModel
+      .find({
+        organization: organizationId,
+        customer: customerId,
+      })
+      .populate('assignedTo', 'name email')
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+  }
+
+  /**
+   * Lấy danh sách tasks liên quan đến một customer
+   */
+  async getRelatedTasks(
+    customerId: string,
+    organizationId: string,
+  ): Promise<TaskDocument[]> {
+    return await this.taskModel
+      .find({
+        organization: organizationId,
+        customer: customerId,
+      })
+      .populate('assignedTo', 'name email')
+      .populate('createdBy', 'name email')
+      .sort({ dueDate: 1 })
+      .lean()
+      .exec();
+  }
+
   async findById(
     id: string,
     organizationId: string,
@@ -80,10 +125,28 @@ export class CustomersService {
         _id: id,
         organization: organizationId,
       })
-      .populate('assignedTo', 'name email');
+      .populate('assignedTo', 'name email')
+      .lean();
 
     if (!customer) {
       throw new NotFoundException(`Khách hàng với ID ${id} không tìm thấy`);
+    }
+
+    try {
+      // Lấy deals liên quan
+      const relatedDeals = await this.getRelatedDeals(id, organizationId);
+
+      // Lấy tasks liên quan
+      const relatedTasks = await this.getRelatedTasks(id, organizationId);
+
+      // Thêm vào kết quả trả về (type casting để bổ sung trường mới)
+      (customer as CustomerWithRelatedData).relatedDeals = relatedDeals;
+      (customer as CustomerWithRelatedData).relatedTasks = relatedTasks;
+    } catch (error) {
+      console.error(`Error fetching related data for customer ${id}:`, error);
+      // Gán mảng rỗng nếu có lỗi
+      (customer as CustomerWithRelatedData).relatedDeals = [];
+      (customer as CustomerWithRelatedData).relatedTasks = [];
     }
 
     return customer;

@@ -201,6 +201,7 @@ export class TasksService {
     // Check if we're completing the task
     if (updateTaskDto.status === 'completed' && oldStatus !== 'completed') {
       updateTaskDto.completedAt = new Date();
+      updateTaskDto.completedBy = updateTaskDto.assignedTo;
     }
 
     const task = await this.taskModel
@@ -210,6 +211,7 @@ export class TasksService {
         { new: true, runValidators: true },
       )
       .populate('assignedTo', 'name email')
+      .populate('completedBy', 'name email')
       .populate('createdBy', 'name email')
       .populate('customer', 'name email company')
       .populate('deal', 'name value stage')

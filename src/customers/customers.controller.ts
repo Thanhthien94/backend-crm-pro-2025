@@ -17,6 +17,7 @@ import {
   ApiResponse,
   ApiQuery,
   ApiBearerAuth,
+  ApiParam,
 } from '@nestjs/swagger';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
@@ -352,6 +353,60 @@ export class CustomersController {
     return {
       success: validationResult.valid,
       data: validationResult,
+    };
+  }
+
+  @Get(':id/deals')
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'read')
+  @ApiOperation({ summary: 'Lấy danh sách deals liên quan đến khách hàng' })
+  @ApiResponse({ status: 200, description: 'Trả về danh sách deals.' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy khách hàng.' })
+  @ApiParam({ name: 'id', description: 'Customer ID' })
+  @ApiBearerAuth()
+  async getRelatedDeals(
+    @Param('id') id: string,
+    @Request() req: RequestWithUser,
+  ) {
+    // Kiểm tra khách hàng có tồn tại không
+    await this.customersService.findById(id, req.user.organization.toString());
+
+    const deals = await this.customersService.getRelatedDeals(
+      id,
+      req.user.organization.toString(),
+    );
+
+    return {
+      success: true,
+      count: deals.length,
+      data: deals,
+    };
+  }
+
+  @Get(':id/tasks')
+  @UseGuards(AccessControlGuard)
+  @AccessControl('customer', 'read')
+  @ApiOperation({ summary: 'Lấy danh sách tasks liên quan đến khách hàng' })
+  @ApiResponse({ status: 200, description: 'Trả về danh sách tasks.' })
+  @ApiResponse({ status: 404, description: 'Không tìm thấy khách hàng.' })
+  @ApiParam({ name: 'id', description: 'Customer ID' })
+  @ApiBearerAuth()
+  async getRelatedTasks(
+    @Param('id') id: string,
+    @Request() req: RequestWithUser,
+  ) {
+    // Kiểm tra khách hàng có tồn tại không
+    await this.customersService.findById(id, req.user.organization.toString());
+
+    const tasks = await this.customersService.getRelatedTasks(
+      id,
+      req.user.organization.toString(),
+    );
+
+    return {
+      success: true,
+      count: tasks.length,
+      data: tasks,
     };
   }
 }

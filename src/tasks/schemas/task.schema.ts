@@ -46,6 +46,12 @@ export class Task {
   dueDate!: Date;
 
   @Prop({
+    type: Date,
+    required: true,
+  })
+  reminderDate!: Date;
+
+  @Prop({
     type: MongooseSchema.Types.ObjectId,
     ref: 'User',
     required: true,
@@ -58,6 +64,13 @@ export class Task {
     required: true,
   })
   createdBy!: User;
+
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  })
+  completedBy!: User;
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,

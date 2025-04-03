@@ -17,6 +17,12 @@ export class UpdateTaskDto extends PartialType(CreateTaskDto) {
   @Type(() => Date)
   completedAt?: Date;
 
+  @ApiProperty({ example: '2023-09-30T15:00:00.000Z', required: false })
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  reminderDate?: Date;
+
   @ApiProperty({
     example: '60d21b4667d0d8992e610c85',
     required: false,
@@ -37,4 +43,14 @@ export class UpdateTaskDto extends PartialType(CreateTaskDto) {
   @IsEnum(RelatedEntityType)
   @ValidateIf((o) => o.relatedType !== undefined || o.relatedTo !== undefined)
   relatedType?: RelatedEntityType;
+
+  @ApiProperty({ example: false, required: false })
+  @IsOptional()
+  @IsEnum(['daily', 'weekly', 'monthly', 'none'])
+  recurringFrequency?: string;
+
+  @ApiProperty({ example: '60d21b4667d0d8992e610c85', required: false })
+  @IsOptional()
+  @IsMongoId()
+  completedBy?: string;
 }

@@ -42,11 +42,17 @@ export class CreateTaskDto {
   @IsEnum(['low', 'medium', 'high'])
   priority?: string = 'medium';
 
-  @ApiProperty({ example: '2023-09-30T15:00:00.000Z' })
+  @ApiProperty({ example: '2025-09-30T15:00:00.000Z' })
   @IsNotEmpty()
   @IsDate()
   @Type(() => Date)
   dueDate!: Date;
+
+  @ApiProperty({ example: '2025-09-30T15:00:00.000Z' })
+  @IsNotEmpty()
+  @IsDate()
+  @Type(() => Date)
+  reminderDate!: Date;
 
   @ApiProperty({ example: '60d21b4667d0d8992e610c85', required: false })
   @IsOptional()
